@@ -1,0 +1,21 @@
+{
+  "name": "toolhub",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Nền tảng tiện ích QRCode và công cụ tệp đa năng",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "install:all": "npm --prefix frontend install && npm --prefix backend install",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend run start:dev",
+    "build:frontend": "npm --prefix frontend run build",
+    "build:backend": "npm --prefix backend run build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "lint:frontend": "npm --prefix frontend run lint",
+    "lint:backend": "npm --prefix backend run lint",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "test:backend": "npm --prefix backend run test"
+  }
+}
