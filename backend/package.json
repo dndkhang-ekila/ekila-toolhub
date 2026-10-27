@@ -25,10 +25,7 @@
     "@nestjs/platform-express": "^11.0.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
-<<<<<<< HEAD
-=======
     "qrcode": "^1.5.4",
->>>>>>> origin/develop
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },

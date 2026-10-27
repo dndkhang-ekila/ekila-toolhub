@@ -10,4 +10,4 @@ import { TwoFactorAuthModule } from './two-factor-auth/two-factor-auth.module';
     TwoFactorAuthModule,
   ],
 })
-export class AppModule { }
+export class AppModule {}
