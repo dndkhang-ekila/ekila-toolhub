@@ -20,6 +20,13 @@ async function bootstrap() {
     credentials: true,
   });
 
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+    }),
+  );
+
   await app.listen(config.get<number>('PORT', 4000));
 }
 void bootstrap();
