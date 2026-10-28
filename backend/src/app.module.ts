@@ -4,6 +4,8 @@ import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { join } from 'path';
 import { User } from './auth/entities/user.entity';
 import { AuthModule } from './auth/auth.module';
+import { AccountModule } from './account/account.module';
+import { TwoFactorAuthModule } from './two-factor-auth/two-factor-auth.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { AuthModule } from './auth/auth.module';
       }),
     }),
     AuthModule,
+    AccountModule,
+    TwoFactorAuthModule,
   ],
 })
 export class AppModule {}
