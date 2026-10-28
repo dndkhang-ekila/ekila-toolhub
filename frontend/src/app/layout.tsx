@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider, antiFoucScript } from "@/context/ThemeContext";
 import { LanguageProvider } from "@/context/LanguageContext";
+import { AuthProvider } from "@/context/AuthContext";
 import { Navbar } from "@/components/common/Navbar";
 import { Footer } from "@/components/common/Footer";
 
@@ -45,9 +46,11 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <LanguageProvider>
-            <Navbar />
-            <div className="flex-1 flex flex-col">{children}</div>
-            <Footer />
+            <AuthProvider>
+              <Navbar />
+              <div className="flex-1 flex flex-col">{children}</div>
+              <Footer />
+            </AuthProvider>
           </LanguageProvider>
         </ThemeProvider>
       </body>

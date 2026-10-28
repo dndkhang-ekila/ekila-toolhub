@@ -6,9 +6,11 @@ import { usePathname } from 'next/navigation';
 import { ThemeToggle } from './ThemeToggle';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 
 export function Navbar() {
   const { t } = useLanguage();
+  const { user, isAuthenticated, logout } = useAuth();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -68,25 +70,58 @@ export function Navbar() {
             </nav>
           </div>
 
-          {/* Right Controls: Theme Toggle, Language Switcher, Account */}
-          <div className="hidden sm:flex items-center gap-2.5">
+          {/* Right Controls: Theme Toggle, Language Switcher, Auth Buttons */}
+          <div className="hidden sm:flex items-center gap-2">
             <LanguageSwitcher />
             <ThemeToggle />
             <div className="h-5 w-px bg-neutral-200 dark:bg-neutral-700/60 mx-1" />
-            <Link
-              href="/account"
-              aria-label={t('accessibility.userProfileAria')}
-              className="p-2 rounded-lg text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-white dark:hover:bg-neutral-800 transition-colors focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                />
-              </svg>
-            </Link>
+
+            {isAuthenticated ? (
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/account"
+                  aria-label={t('accessibility.userProfileAria')}
+                  className="flex items-center gap-2 p-1.5 rounded-lg text-neutral-700 hover:text-neutral-900 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:text-white dark:hover:bg-neutral-800 transition-colors focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                >
+                  <div className="w-7 h-7 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center">
+                    {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-xs font-semibold max-w-[100px] truncate hidden md:inline">
+                    {user?.name || user?.email?.split('@')[0]}
+                  </span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="p-1.5 rounded-lg text-neutral-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-xs transition"
+                  title={t('nav.logout')}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                    />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/login"
+                  className="px-3 py-1.5 text-xs font-semibold text-neutral-700 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition"
+                >
+                  {t('nav.login')}
+                </Link>
+                <Link
+                  href="/register"
+                  className="px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 rounded-lg shadow-xs transition"
+                >
+                  {t('nav.register')}
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Mobile hamburger menu button */}
@@ -121,7 +156,7 @@ export function Navbar() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3 py-2.5 rounded-lg text-base font-medium transition-colors ${
+                className={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400 font-semibold'
                     : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800'
@@ -131,6 +166,38 @@ export function Navbar() {
               </Link>
             );
           })}
+
+          <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800 flex flex-col gap-1.5">
+            {isAuthenticated ? (
+              <button
+                type="button"
+                onClick={() => {
+                  logout();
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-rose-600 dark:text-rose-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition"
+              >
+                {t('nav.logout')} ({user?.email})
+              </button>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 rounded-lg text-sm font-medium text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800 transition"
+                >
+                  {t('nav.login')}
+                </Link>
+                <Link
+                  href="/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block px-3 py-2 rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 rounded-lg transition text-center"
+                >
+                  {t('nav.register')}
+                </Link>
+              </>
+            )}
+          </div>
         </div>
       )}
     </header>
