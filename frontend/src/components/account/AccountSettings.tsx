@@ -9,9 +9,15 @@ import {
 } from '@/lib/account-api';
 import { UserProfile } from '@/types/account';
 import { ConfirmModal } from './ConfirmModal';
+import { useTheme } from '@/context/ThemeContext';
+import { useLanguage } from '@/context/LanguageContext';
+import { Theme } from '@/types/theme';
+import { Locale } from '@/types/language';
 
 export function AccountSettings() {
-    const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'sessions'>('profile');
+    const { theme, setTheme } = useTheme();
+    const { locale, setLocale, t } = useLanguage();
+    const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'sessions' | 'preferences'>('profile');
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -164,43 +170,53 @@ export function AccountSettings() {
 
             <div className="mb-8">
                 <h1 className="text-3xl font-extrabold text-neutral-900 dark:text-white tracking-tight">
-                    Cài đặt tài khoản
+                    {t('account.title')}
                 </h1>
                 <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-                    Quản lý thông tin hồ sơ, mật khẩu và phiên đăng nhập bảo mật
+                    {t('account.subtitle')}
                 </p>
             </div>
 
-            <div className="flex border-b border-neutral-200 dark:border-neutral-800 mb-8 gap-2">
+            <div className="flex border-b border-neutral-200 dark:border-neutral-800 mb-8 gap-2 overflow-x-auto pb-px">
                 <button
                     type="button"
                     onClick={() => setActiveTab('profile')}
-                    className={`pb-3 px-4 font-semibold text-sm border-b-2 transition ${activeTab === 'profile'
+                    className={`pb-3 px-4 font-semibold text-sm border-b-2 transition shrink-0 ${activeTab === 'profile'
                             ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
                             : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
                         }`}
                 >
-                    Hồ sơ cá nhân
+                    {t('account.profileTab')}
                 </button>
                 <button
                     type="button"
                     onClick={() => setActiveTab('password')}
-                    className={`pb-3 px-4 font-semibold text-sm border-b-2 transition ${activeTab === 'password'
+                    className={`pb-3 px-4 font-semibold text-sm border-b-2 transition shrink-0 ${activeTab === 'password'
                             ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
                             : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
                         }`}
                 >
-                    Đổi mật khẩu
+                    {t('account.passwordTab')}
                 </button>
                 <button
                     type="button"
                     onClick={() => setActiveTab('sessions')}
-                    className={`pb-3 px-4 font-semibold text-sm border-b-2 transition ${activeTab === 'sessions'
+                    className={`pb-3 px-4 font-semibold text-sm border-b-2 transition shrink-0 ${activeTab === 'sessions'
                             ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
                             : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
                         }`}
                 >
-                    Thiết bị & Bảo mật
+                    {t('account.sessionsTab')}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('preferences')}
+                    className={`pb-3 px-4 font-semibold text-sm border-b-2 transition shrink-0 ${activeTab === 'preferences'
+                            ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                            : 'border-transparent text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'
+                        }`}
+                >
+                    {t('account.preferencesTab')}
                 </button>
             </div>
 
@@ -416,6 +432,169 @@ export function AccountSettings() {
                         >
                             Đăng xuất khỏi mọi thiết bị
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'preferences' && (
+                <div className="space-y-8 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 sm:p-8 shadow-sm">
+                    <div>
+                        <h3 className="text-lg font-bold text-neutral-900 dark:text-white">
+                            {t('account.preferencesTitle')}
+                        </h3>
+                        <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+                            {t('account.preferencesDesc')}
+                        </p>
+                    </div>
+
+                    {/* Section 1: Chế độ giao diện (Theme) */}
+                    <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800 space-y-4">
+                        <div>
+                            <h4 className="font-semibold text-sm text-neutral-900 dark:text-white">
+                                {t('account.themeSectionTitle')}
+                            </h4>
+                            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                                {t('account.themeSectionHint')}
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                            {[
+                                {
+                                    id: 'light' as Theme,
+                                    title: t('theme.light'),
+                                    desc: t('theme.lightDesc'),
+                                    icon: (
+                                        <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                                        </svg>
+                                    ),
+                                },
+                                {
+                                    id: 'dark' as Theme,
+                                    title: t('theme.dark'),
+                                    desc: t('theme.darkDesc'),
+                                    icon: (
+                                        <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                                        </svg>
+                                    ),
+                                },
+                                {
+                                    id: 'system' as Theme,
+                                    title: t('theme.system'),
+                                    desc: t('theme.systemDesc'),
+                                    icon: (
+                                        <svg className="w-5 h-5 text-neutral-500 dark:text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                        </svg>
+                                    ),
+                                },
+                            ].map((item) => {
+                                const isSelected = theme === item.id;
+                                return (
+                                    <button
+                                        key={item.id}
+                                        type="button"
+                                        onClick={() => {
+                                            setTheme(item.id);
+                                            showToast('success', t('account.savedPreferencesToast'));
+                                        }}
+                                        className={`p-4 rounded-xl border text-left flex flex-col justify-between transition-all ${
+                                            isSelected
+                                                ? 'border-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/40 dark:border-indigo-500 shadow-sm ring-2 ring-indigo-600/20'
+                                                : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 bg-white dark:bg-neutral-900/50'
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between w-full mb-3">
+                                            <div className="p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800">
+                                                {item.icon}
+                                            </div>
+                                            {isSelected && (
+                                                <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold">
+                                                    ✓
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <h5 className="font-semibold text-sm text-neutral-900 dark:text-white">
+                                                {item.title}
+                                            </h5>
+                                            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed">
+                                                {item.desc}
+                                            </p>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Section 2: Ngôn ngữ (Language) */}
+                    <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800 space-y-4">
+                        <div>
+                            <h4 className="font-semibold text-sm text-neutral-900 dark:text-white">
+                                {t('account.languageSectionTitle')}
+                            </h4>
+                            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                                {t('account.languageSectionHint')}
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                            {[
+                                {
+                                    code: 'vi' as Locale,
+                                    label: 'Tiếng Việt',
+                                    nativeName: 'Tiếng Việt (Việt Nam)',
+                                    flag: '🇻🇳',
+                                    desc: t('language.viDesc'),
+                                },
+                                {
+                                    code: 'en' as Locale,
+                                    label: 'English',
+                                    nativeName: 'English (United States)',
+                                    flag: '🇬🇧',
+                                    desc: t('language.enDesc'),
+                                },
+                            ].map((item) => {
+                                const isSelected = locale === item.code;
+                                return (
+                                    <button
+                                        key={item.code}
+                                        type="button"
+                                        onClick={() => {
+                                            setLocale(item.code);
+                                            showToast('success', t('account.savedPreferencesToast'));
+                                        }}
+                                        className={`p-4 rounded-xl border text-left flex items-center justify-between transition-all ${
+                                            isSelected
+                                                ? 'border-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/40 dark:border-indigo-500 shadow-sm ring-2 ring-indigo-600/20'
+                                                : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 bg-white dark:bg-neutral-900/50'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3.5">
+                                            <span className="text-3xl leading-none" role="img" aria-label={item.label}>
+                                                {item.flag}
+                                            </span>
+                                            <div>
+                                                <h5 className="font-semibold text-sm text-neutral-900 dark:text-white">
+                                                    {item.nativeName}
+                                                </h5>
+                                                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                                                    {item.desc}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {isSelected && (
+                                            <span className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                                                ✓
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             )}
