@@ -30,6 +30,8 @@ Backend local hiện chưa có API auth/KAN-93. Vì vậy có thể xem và sử
 
 `NEXT_PUBLIC_LOGIN_URL` mặc định `/login`; trang đăng nhập thuộc KAN-15 và chưa tồn tại trong source local. Cần trỏ cấu hình về trang đăng nhập thực tế khi tích hợp. Link thương hiệu dẫn về trang chủ của dự án.
 
+Hai trang nằm trong nhóm route `src/app/(password-reset)` với layout riêng, không đổi URL công khai. Nhánh này được tạo từ `develop` và cherry-pick commit FE `52a8c94`; không đưa phần đăng nhập FR-ACC-01 từ `main` vào. Layout riêng tránh dùng chung khung trang với đăng nhập khi FR-ACC-01 được tích hợp sau này.
+
 Backend phải kiểm tra token dùng một lần, thời hạn 30 phút, trạng thái tài khoản và chính sách mật khẩu chung. FE chỉ kiểm tra email, trường bắt buộc và mật khẩu xác nhận; không tự đặt chính sách độ dài/độ phức tạp riêng khi nhóm chưa chốt.
 
 ## Kiểm thử giao diện
@@ -38,6 +40,6 @@ Chạy frontend trước, sau đó chạy `node --test test/password-reset.e2e.m
 
 `TEST_BASE_URL` mặc định `http://localhost:3000`. `TEST_SCREENSHOT_DIR` là thư mục lưu ảnh tùy chọn. Bộ kiểm thử chặn các request API auth và trả phản hồi giả lập chỉ trong môi trường kiểm thử; không gửi email, không đổi mật khẩu thật. Kiểm tra tiếp nhận yêu cầu, lỗi API, giới hạn tần suất, token không hợp lệ/hết hạn, mật khẩu không khớp, thành công, ngôn ngữ và bố cục mobile. Việc vượt qua các bài này chưa chứng minh backend đáp ứng thời hạn 30 phút hoặc token dùng một lần.
 
-Kiểm tra local ngày 27/10/2026: 12 bài kiểm thử trình duyệt đã đạt, ESLint và TypeScript đã đạt. Build production chưa đạt: lần đầu không tải được Google Fonts; các lần sau Turbopack dừng khi tạo tiến trình xử lý globals.css. Cần khắc phục và chạy lại build trước khi bàn giao production.
+Kiểm tra ngày 28/10/2026 trên nhánh tạo từ `develop`: 12 bài kiểm thử trình duyệt và build production đã đạt. Lockfile frontend có sẵn trên `develop` chưa đồng bộ với npm 11 nên `npm ci --ignore-scripts` không chạy được; môi trường kiểm thử được cài bằng `npm install --ignore-scripts --package-lock=false`, không sửa lockfile trong PR này.
 
 Trước production, cấu hình loại token khỏi access log của proxy, ứng dụng, APM và mọi hệ thống giám sát. Không đặt analytics/tài nguyên bên thứ ba vào trang reset. Chặn cache ở CDN/service worker cho hai trang và API auth. Không dùng token thật khi chụp hình hoặc ghi kết quả kiểm thử.
