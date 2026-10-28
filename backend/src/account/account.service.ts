@@ -94,6 +94,9 @@ export class AccountService {
       name: user.name,
       avatarUrl: user.avatarUrl,
       phone: user.phone,
+      role: user.role,
+      plan: user.plan,
+      isEmailVerified: user.isEmailVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

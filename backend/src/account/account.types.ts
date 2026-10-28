@@ -1,9 +1,12 @@
 export interface UserProfile {
   id: string;
   email: string;
-  name: string;
+  name?: string;
   avatarUrl?: string;
   phone?: string;
+  role?: string;
+  plan?: string;
+  isEmailVerified?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
