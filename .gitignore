@@ -39,3 +39,12 @@ Thumbs.db
 *.swp
 
 .vercel
+
+# Database files
+*.sqlite
+*.sqlite-journal
+*.db
+backend/data/
+
+# Specification documents
+*.docx
