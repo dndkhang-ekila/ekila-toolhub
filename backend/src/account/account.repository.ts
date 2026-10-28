@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { UserAccount } from './account.types';
+import {
+  LocalePreference,
+  ThemePreference,
+  UserAccount,
+} from './account.types';
 import { PasswordHasher } from './password-hasher';
 
 @Injectable()
@@ -15,6 +19,8 @@ export class AccountRepository {
       avatarUrl:
         'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
       phone: '0901234567',
+      theme: 'system',
+      locale: 'vi',
       tokenVersion: 1,
       passwordHash: demoPassword.hash,
       passwordSalt: demoPassword.salt,
@@ -40,7 +46,13 @@ export class AccountRepository {
 
   updateProfile(
     id: string,
-    updates: { name?: string; avatarUrl?: string; phone?: string },
+    updates: {
+      name?: string;
+      avatarUrl?: string;
+      phone?: string;
+      theme?: ThemePreference;
+      locale?: LocalePreference;
+    },
   ): Promise<UserAccount | null> {
     const user = this.users.get(id);
     if (!user) {
@@ -49,6 +61,29 @@ export class AccountRepository {
     const updatedUser: UserAccount = {
       ...user,
       ...updates,
+      updatedAt: new Date(),
+    };
+    this.users.set(id, updatedUser);
+    return Promise.resolve({ ...updatedUser });
+  }
+
+  updatePreferences(
+    id: string,
+    preferences: {
+      theme?: ThemePreference;
+      locale?: LocalePreference;
+    },
+  ): Promise<UserAccount | null> {
+    const user = this.users.get(id);
+    if (!user) {
+      return Promise.resolve(null);
+    }
+    const updatedUser: UserAccount = {
+      ...user,
+      ...(preferences.theme !== undefined ? { theme: preferences.theme } : {}),
+      ...(preferences.locale !== undefined
+        ? { locale: preferences.locale }
+        : {}),
       updatedAt: new Date(),
     };
     this.users.set(id, updatedUser);

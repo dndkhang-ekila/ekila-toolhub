@@ -1,5 +1,12 @@
 // sửa hồ sơ
-import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import {
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
+import type { LocalePreference, ThemePreference } from '../account.types';
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -15,4 +22,16 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   phone?: string;
+
+  @IsOptional()
+  @IsIn(['light', 'dark', 'system'], {
+    message: 'Theme phải là light, dark hoặc system',
+  })
+  theme?: ThemePreference;
+
+  @IsOptional()
+  @IsIn(['vi', 'en'], {
+    message: 'Locale phải là vi hoặc en',
+  })
+  locale?: LocalePreference;
 }
