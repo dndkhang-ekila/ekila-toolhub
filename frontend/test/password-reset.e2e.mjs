@@ -82,7 +82,6 @@ test("login and password recovery retain separate layouts and navigation", async
   assert.equal(await page.getByRole("main").count(), 1);
   assert.equal(await page.getByRole("heading", { level: 1 }).count(), 1);
 });
-
 test("forgot password validates email without sending an API request", async (t) => {
   const page = await pageFor(t, { viewport: { width: 1440, height: 1000 } });
   let calls = 0;
