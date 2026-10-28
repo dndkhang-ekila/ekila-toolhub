@@ -5,8 +5,9 @@ import {
 } from '@nestjs/common';
 import { AccountRepository } from './account.repository';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdatePreferencesDto } from './dto/update-preferences.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-import { UserAccount, UserProfile } from './account.types';
+import { UserAccount, UserPreferences, UserProfile } from './account.types';
 import { PasswordHasher } from './password-hasher';
 
 @Injectable()
@@ -30,6 +31,31 @@ export class AccountService {
       throw new NotFoundException('Không tìm thấy người dùng');
     }
     return this.toUserProfile(updated);
+  }
+
+  async getPreferences(userId: string): Promise<UserPreferences> {
+    const user = await this.accountRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException('Không tìm thấy người dùng');
+    }
+    return {
+      theme: user.theme || 'system',
+      locale: user.locale || 'vi',
+    };
+  }
+
+  async updatePreferences(
+    userId: string,
+    dto: UpdatePreferencesDto,
+  ): Promise<UserPreferences> {
+    const updated = await this.accountRepository.updatePreferences(userId, dto);
+    if (!updated) {
+      throw new NotFoundException('Không tìm thấy người dùng');
+    }
+    return {
+      theme: updated.theme || 'system',
+      locale: updated.locale || 'vi',
+    };
   }
 
   async changePassword(
@@ -94,6 +120,8 @@ export class AccountService {
       name: user.name,
       avatarUrl: user.avatarUrl,
       phone: user.phone,
+      theme: user.theme || 'system',
+      locale: user.locale || 'vi',
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
