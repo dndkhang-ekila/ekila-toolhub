@@ -39,3 +39,8 @@ Thumbs.db
 *.swp
 
 .vercel
+
+backend/data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
