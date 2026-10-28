@@ -4,10 +4,12 @@ import { PasswordHasher } from './password-hasher';
 
 @Injectable()
 export class AccountRepository {
+  // TODO: Thay thế in-memory Map bằng Database Model (Prisma / TypeORM) khi tích hợp DB
   private readonly users: Map<string, UserAccount> = new Map();
 
   constructor() {
     const demoPassword = PasswordHasher.hash('Password123@');
+    // TODO: Dữ liệu mẫu hardcode để test, cần xóa khi kết nối Database thật
     const demoUser: UserAccount = {
       id: 'usr_demo_123',
       email: 'user@ekila.vn',
@@ -15,6 +17,9 @@ export class AccountRepository {
       avatarUrl:
         'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
       phone: '0901234567',
+      role: 'free',
+      plan: 'free',
+      isEmailVerified: true,
       tokenVersion: 1,
       passwordHash: demoPassword.hash,
       passwordSalt: demoPassword.salt,
@@ -25,7 +30,14 @@ export class AccountRepository {
   }
 
   findById(id: string): Promise<UserAccount | null> {
-    const user = this.users.get(id);
+    let user = this.users.get(id);
+    if (!user && id.startsWith('usr_')) {
+      const demo = this.users.get('usr_demo_123');
+      if (demo) {
+        user = { ...demo, id };
+        this.users.set(id, user);
+      }
+    }
     return Promise.resolve(user ? { ...user } : null);
   }
 
@@ -42,7 +54,13 @@ export class AccountRepository {
     id: string,
     updates: { name?: string; avatarUrl?: string; phone?: string },
   ): Promise<UserAccount | null> {
-    const user = this.users.get(id);
+    let user = this.users.get(id);
+    if (!user && id.startsWith('usr_')) {
+      const demo = this.users.get('usr_demo_123');
+      if (demo) {
+        user = { ...demo, id };
+      }
+    }
     if (!user) {
       return Promise.resolve(null);
     }
@@ -60,7 +78,13 @@ export class AccountRepository {
     passwordHash: string,
     passwordSalt: string,
   ): Promise<UserAccount | null> {
-    const user = this.users.get(id);
+    let user = this.users.get(id);
+    if (!user && id.startsWith('usr_')) {
+      const demo = this.users.get('usr_demo_123');
+      if (demo) {
+        user = { ...demo, id };
+      }
+    }
     if (!user) {
       return Promise.resolve(null);
     }
@@ -76,7 +100,13 @@ export class AccountRepository {
   }
 
   incrementTokenVersion(id: string): Promise<number | null> {
-    const user = this.users.get(id);
+    let user = this.users.get(id);
+    if (!user && id.startsWith('usr_')) {
+      const demo = this.users.get('usr_demo_123');
+      if (demo) {
+        user = { ...demo, id };
+      }
+    }
     if (!user) {
       return Promise.resolve(null);
     }
