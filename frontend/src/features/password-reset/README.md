@@ -28,9 +28,9 @@ Lỗi đầu vào 400/422 dùng `{ "error": { "code": "..." } }`. Các mã đư�
 
 Backend local hiện chưa có API auth/KAN-93. Vì vậy có thể xem và sử dụng giao diện nhưng chưa gửi được email hoặc đổi mật khẩu thật. Các trạng thái thành công chỉ xuất hiện sau phản hồi API đúng hợp đồng.
 
-`NEXT_PUBLIC_LOGIN_URL` mặc định `/login`, trỏ về trang đăng nhập FR-ACC-01 đã tích hợp. Liên kết “Quên mật khẩu?” trên trang đăng nhập dẫn đến `/forgot-password`. Link thương hiệu dẫn về trang chủ của dự án.
+`NEXT_PUBLIC_LOGIN_URL` mặc định `/login`; trang đăng nhập thuộc KAN-15 và chưa tồn tại trong source local. Cần trỏ cấu hình về trang đăng nhập thực tế khi tích hợp. Link thương hiệu dẫn về trang chủ của dự án.
 
-Hai trang khôi phục nằm trong nhóm route `src/app/(password-reset)` với layout riêng. Nhóm `src/app/(auth)` giữ layout đăng nhập/đăng ký của FR-ACC-01; việc tách nhóm không thay đổi URL.
+Hai trang nằm trong nhóm route `src/app/(password-reset)` với layout riêng, không đổi URL công khai. Nhánh này được tạo từ `develop` và cherry-pick commit FE `52a8c94`; không đưa phần đăng nhập FR-ACC-01 từ `main` vào. Layout riêng tránh dùng chung khung trang với đăng nhập khi FR-ACC-01 được tích hợp sau này.
 
 Backend phải kiểm tra token dùng một lần, thời hạn 30 phút, trạng thái tài khoản và chính sách mật khẩu chung. FE chỉ kiểm tra email, trường bắt buộc và mật khẩu xác nhận; không tự đặt chính sách độ dài/độ phức tạp riêng khi nhóm chưa chốt.
 
@@ -40,6 +40,6 @@ Chạy frontend trước, sau đó chạy `node --test test/password-reset.e2e.m
 
 `TEST_BASE_URL` mặc định `http://localhost:3000`. `TEST_SCREENSHOT_DIR` là thư mục lưu ảnh tùy chọn. Bộ kiểm thử chặn các request API auth và trả phản hồi giả lập chỉ trong môi trường kiểm thử; không gửi email, không đổi mật khẩu thật. Kiểm tra tiếp nhận yêu cầu, lỗi API, giới hạn tần suất, token không hợp lệ/hết hạn, mật khẩu không khớp, thành công, ngôn ngữ và bố cục mobile. Việc vượt qua các bài này chưa chứng minh backend đáp ứng thời hạn 30 phút hoặc token dùng một lần.
 
-Kiểm tra tích hợp ngày 28/10/2026: ESLint, TypeScript và build production đã đạt trong bản làm việc riêng sau khi tích hợp `main`. Bộ kiểm thử trình duyệt gồm 12 tình huống reset mật khẩu và một tình huống chuyển trang đăng nhập → quên mật khẩu → đăng nhập → đăng ký để kiểm tra hai layout độc lập.
+Kiểm tra ngày 28/10/2026 trên nhánh tạo từ `develop`: 12 bài kiểm thử trình duyệt và build production đã đạt. Lockfile frontend có sẵn trên `develop` chưa đồng bộ với npm 11 nên `npm ci --ignore-scripts` không chạy được; môi trường kiểm thử được cài bằng `npm install --ignore-scripts --package-lock=false`, không sửa lockfile trong PR này.
 
 Trước production, cấu hình loại token khỏi access log của proxy, ứng dụng, APM và mọi hệ thống giám sát. Không đặt analytics/tài nguyên bên thứ ba vào trang reset. Chặn cache ở CDN/service worker cho hai trang và API auth. Không dùng token thật khi chụp hình hoặc ghi kết quả kiểm thử.
