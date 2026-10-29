@@ -52,6 +52,16 @@ export const ALL_TOOLS: Tool[] = [
     badge: 'Mới',
     tags: ['custom', 'logo', 'màu sắc', 'gradient', 'design'],
   },
+  {
+    id: 'url-shortener',
+    name: 'Rút gọn liên kết (Shortener)',
+    description: 'Rút gọn link tức thì, gắn tham số UTM chiến dịch, bật/tắt link và theo dõi lượt click.',
+    category: 'qr',
+    href: '/links',
+    icon: 'link',
+    badge: 'Mới',
+    tags: ['rút gọn link', 'shortener', 'url', 'utm', 'link ngắn', 'chuyển hướng'],
+  },
 
   // Nhóm xử lý tệp
   {
