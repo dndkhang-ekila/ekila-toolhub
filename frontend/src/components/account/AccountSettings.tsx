@@ -3,12 +3,15 @@
 import { useEffect, useState } from 'react';
 import {
     changePassword,
+    deleteAccount,
     fetchProfile,
     logoutAllDevices,
+    restoreAccount,
     updateProfile,
 } from '@/lib/account-api';
 import { UserProfile } from '@/types/account';
 import { ConfirmModal } from './ConfirmModal';
+import { DeleteAccountModal } from './DeleteAccountModal';
 import { useTheme } from '@/context/ThemeContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { Theme } from '@/types/theme';
@@ -17,7 +20,7 @@ import { Locale } from '@/types/language';
 export function AccountSettings() {
     const { theme, setTheme } = useTheme();
     const { locale, setLocale, t } = useLanguage();
-    const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'sessions' | 'preferences'>('profile');
+    const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'sessions' | 'preferences' | 'delete'>('profile');
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -33,6 +36,10 @@ export function AccountSettings() {
 
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
     const [logoutLoading, setLogoutLoading] = useState(false);
+
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+    const [restoreLoading, setRestoreLoading] = useState(false);
 
     const [toast, setToast] = useState<{
         type: 'success' | 'error';
@@ -131,6 +138,52 @@ export function AccountSettings() {
         }
     };
 
+    const handleDeleteAccount = async (password: string) => {
+        try {
+            setDeleteLoading(true);
+            const res = await deleteAccount({ password });
+            setProfile((prev) =>
+                prev
+                    ? {
+                          ...prev,
+                          isDeleted: true,
+                          scheduledPermanentDeletionAt: res.scheduledPermanentDeletionAt,
+                      }
+                    : null,
+            );
+            setIsDeleteModalOpen(false);
+            showToast('success', res.message || (t('account.deleteSuccessToast') as string));
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Lỗi khi yêu cầu xoá tài khoản';
+            showToast('error', msg);
+        } finally {
+            setDeleteLoading(false);
+        }
+    };
+
+    const handleRestoreAccount = async () => {
+        try {
+            setRestoreLoading(true);
+            const res = await restoreAccount();
+            setProfile((prev) =>
+                prev
+                    ? {
+                          ...prev,
+                          isDeleted: false,
+                          scheduledPermanentDeletionAt: null,
+                          deletedAt: null,
+                      }
+                    : null,
+            );
+            showToast('success', res.message || (t('account.restoreSuccessToast') as string));
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : 'Lỗi khi khôi phục tài khoản';
+            showToast('error', msg);
+        } finally {
+            setRestoreLoading(false);
+        }
+    };
+
     const getPasswordStrength = () => {
         if (!newPassword) return { text: '', color: '', percent: 0 };
         if (newPassword.length < 8) return { text: 'Quá ngắn', color: 'bg-red-500', percent: 25 };
@@ -217,6 +270,17 @@ export function AccountSettings() {
                         }`}
                 >
                     {t('account.preferencesTab')}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setActiveTab('delete')}
+                    className={`pb-3 px-4 font-semibold text-sm border-b-2 transition shrink-0 flex items-center gap-1.5 ${activeTab === 'delete'
+                            ? 'border-red-600 text-red-600 dark:text-red-400'
+                            : 'border-transparent text-neutral-500 hover:text-red-600 dark:hover:text-red-400'
+                        }`}
+                >
+                    <span className="w-2 h-2 rounded-full bg-red-500" />
+                    {t('account.deleteTab') || 'Xoá tài khoản'}
                 </button>
             </div>
 
@@ -599,6 +663,113 @@ export function AccountSettings() {
                 </div>
             )}
 
+            {activeTab === 'delete' && (
+                <div className="space-y-6">
+                    {profile?.isDeleted ? (
+                        <div className="p-6 sm:p-8 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border-2 border-amber-300 dark:border-amber-800 shadow-sm space-y-4">
+                            <div className="flex items-start gap-4">
+                                <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0 text-2xl font-bold">
+                                    ⚠️
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="text-lg font-bold text-amber-900 dark:text-amber-100">
+                                        Tài khoản đang trong trạng thái chờ huỷ vĩnh viễn
+                                    </h4>
+                                    <p className="mt-1 text-sm text-amber-800 dark:text-amber-200 leading-relaxed">
+                                        Yêu cầu xoá tài khoản của bạn đã được ghi nhận và đang trong thời hạn ân hạn 30 ngày. 
+                                        Thời điểm xoá vĩnh viễn dự kiến: <strong className="font-semibold underline">
+                                            {profile.scheduledPermanentDeletionAt
+                                                ? new Date(profile.scheduledPermanentDeletionAt).toLocaleDateString(locale === 'vi' ? 'vi-VN' : 'en-US', {
+                                                      year: 'numeric',
+                                                      month: 'long',
+                                                      day: 'numeric',
+                                                      hour: '2-digit',
+                                                      minute: '2-digit',
+                                                  })
+                                                : '30 ngày kể từ ngày yêu cầu'}
+                                        </strong>.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="pt-4 border-t border-amber-200 dark:border-amber-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <p className="text-xs text-amber-700 dark:text-amber-300">
+                                    Đổi ý? Bạn có thể kích hoạt lại tài khoản ngay bây giờ mà không mất bất kỳ dữ liệu nào.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={handleRestoreAccount}
+                                    disabled={restoreLoading}
+                                    className="px-6 py-2.5 rounded-xl font-semibold text-sm bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-sm flex items-center gap-2 shrink-0 disabled:opacity-50"
+                                >
+                                    {restoreLoading ? (
+                                        <>
+                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                            <span>Đang khôi phục...</span>
+                                        </>
+                                    ) : (
+                                        <span>{t('account.restoreAccountBtn') || 'Huỷ yêu cầu & Khôi phục tài khoản'}</span>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="bg-white dark:bg-neutral-900 border border-red-200 dark:border-red-900/60 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+                            <div>
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 mb-3">
+                                    <span>⚠️</span> {t('account.dangerZoneTitle') || 'Vùng nguy hiểm'}
+                                </div>
+                                <h3 className="text-xl font-bold text-neutral-900 dark:text-white">
+                                    {t('account.deleteTitle') || 'Xoá tài khoản vĩnh viễn'}
+                                </h3>
+                                <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+                                    {t('account.deleteSubtitle') || 'Yêu cầu huỷ tài khoản và toàn bộ dữ liệu cá nhân liên quan trong vòng 30 ngày.'}
+                                </p>
+                            </div>
+
+                            <div className="p-5 rounded-xl bg-red-50/60 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 space-y-3">
+                                <h4 className="font-semibold text-sm text-red-900 dark:text-red-200 flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-red-500" />
+                                    {t('account.deleteWarningHeader') || 'Lưu ý cực kỳ quan trọng trước khi xoá tài khoản:'}
+                                </h4>
+                                <ul className="list-disc pl-5 space-y-2 text-xs sm:text-sm text-neutral-600 dark:text-neutral-300">
+                                    <li>
+                                        <strong>Thời hạn ân hạn 30 ngày:</strong> Tài khoản của bạn không bị xoá ngay lập tức mà sẽ chuyển sang trạng thái chờ huỷ trong 30 ngày (tuân thủ Nghị định 13/2023/NĐ-CP).
+                                    </li>
+                                    <li>
+                                        <strong>Vô hiệu hoá phiên đăng nhập:</strong> Mọi phiên đăng nhập hiện tại trên điện thoại, máy tính bảng và trình duyệt sẽ lập tức bị ngắt kết nối.
+                                    </li>
+                                    <li>
+                                        <strong>Xoá sạch dữ liệu:</strong> Sau khi hết 30 ngày, toàn bộ dữ liệu (liên kết rút gọn, mã QR, lịch sử tiện ích, thông tin cá nhân) sẽ bị xoá vĩnh viễn khỏi hệ thống và không thể phục hồi dưới bất kỳ hình thức nào.
+                                    </li>
+                                    <li>
+                                        <strong>Quyền khôi phục:</strong> Bạn có thể quay lại đăng nhập và huỷ bỏ yêu cầu xoá bất kỳ lúc nào trước khi thời hạn 30 ngày kết thúc.
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div className="pt-4 border-t border-neutral-100 dark:border-neutral-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                <div>
+                                    <h5 className="font-semibold text-sm text-neutral-900 dark:text-white">
+                                        Bạn đã sẵn sàng xoá tài khoản?
+                                    </h5>
+                                    <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                                        Hành động này cần xác nhận lại bằng mật khẩu hiện tại của bạn.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsDeleteModalOpen(true)}
+                                    className="px-6 py-2.5 rounded-xl font-semibold text-sm text-white bg-red-600 hover:bg-red-700 transition shadow-sm shrink-0"
+                                >
+                                    {t('account.deleteConfirmButton') || 'Xoá tài khoản (ân hạn 30 ngày)'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
             <ConfirmModal
                 isOpen={isLogoutModalOpen}
                 title="Đăng xuất khỏi mọi thiết bị?"
@@ -608,6 +779,13 @@ export function AccountSettings() {
                 isLoading={logoutLoading}
                 onConfirm={handleLogoutAll}
                 onCancel={() => setIsLogoutModalOpen(false)}
+            />
+
+            <DeleteAccountModal
+                isOpen={isDeleteModalOpen}
+                isLoading={deleteLoading}
+                onConfirm={handleDeleteAccount}
+                onCancel={() => setIsDeleteModalOpen(false)}
             />
         </div>
     );

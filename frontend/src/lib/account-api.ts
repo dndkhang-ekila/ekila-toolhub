@@ -1,5 +1,7 @@
 import {
     ChangePasswordInput,
+    DeleteAccountInput,
+    DeleteAccountResponse,
     UpdateProfileInput,
     UserProfile,
 } from '@/types/account';
@@ -75,5 +77,42 @@ export async function logoutAllDevices(): Promise<{
         success: boolean;
         message: string;
         tokenVersion: number;
+    }>(res);
+}
+
+/**
+ * [FR-ACC-05] Gửi yêu cầu xoá tài khoản với thời hạn ân hạn 30 ngày
+ */
+export async function deleteAccount(
+    input: DeleteAccountInput,
+): Promise<DeleteAccountResponse> {
+    const res = await fetch(`${API_BASE}/account/delete`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': 'usr_demo_123',
+        },
+        body: JSON.stringify(input),
+    });
+    return handleResponse<DeleteAccountResponse>(res);
+}
+
+/**
+ * [FR-ACC-05] Huỷ yêu cầu xoá & Khôi phục tài khoản trong vòng 30 ngày
+ */
+export async function restoreAccount(): Promise<{
+    success: boolean;
+    message: string;
+}> {
+    const res = await fetch(`${API_BASE}/account/restore`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': 'usr_demo_123',
+        },
+    });
+    return handleResponse<{
+        success: boolean;
+        message: string;
     }>(res);
 }
