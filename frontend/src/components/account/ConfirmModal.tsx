@@ -1,4 +1,4 @@
-// hỏi để xác nhận trước khi hủy phiên đăng nhập
+
 'use client';
 
 interface ConfirmModalProps {

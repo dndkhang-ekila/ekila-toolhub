@@ -62,6 +62,26 @@ async function screenshot(page, name) {
   });
 }
 
+test("login and password recovery retain separate layouts and navigation", async (t) => {
+  const page = await pageFor(t);
+  await page.goto(`${baseUrl}/login`);
+  await heading(page, "Đăng nhập vào ToolHub");
+  assert.equal(await page.getByRole("main").count(), 1);
+  assert.equal(await page.getByRole("heading", { level: 1 }).count(), 1);
+  await page.getByRole("link", { name: "Quên mật khẩu?", exact: true }).click();
+  await heading(page, "Quên mật khẩu?");
+  assert.equal(new URL(page.url()).pathname, "/forgot-password");
+  assert.equal(await page.getByRole("main").count(), 1);
+  assert.equal(await page.getByRole("heading", { level: 1 }).count(), 1);
+  await page.getByRole("link", { name: "Quay lại đăng nhập", exact: true }).click();
+  await heading(page, "Đăng nhập vào ToolHub");
+  await page.getByRole("link", { name: "Đăng ký ngay", exact: true }).click();
+  await page.waitForURL(`${baseUrl}/register`);
+  assert.equal(new URL(page.url()).pathname, "/register");
+  await page.getByRole("heading", { level: 1 }).waitFor();
+  assert.equal(await page.getByRole("main").count(), 1);
+  assert.equal(await page.getByRole("heading", { level: 1 }).count(), 1);
+});
 test("forgot password validates email without sending an API request", async (t) => {
   const page = await pageFor(t, { viewport: { width: 1440, height: 1000 } });
   let calls = 0;

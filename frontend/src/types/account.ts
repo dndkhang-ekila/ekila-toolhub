@@ -1,11 +1,17 @@
+import { UserLocale, UserPlan, UserRole } from './auth';
+
 export interface UserProfile {
     id: string;
     email: string;
-    name: string;
+    name?: string;
     avatarUrl?: string;
     phone?: string;
+    role?: UserRole;
+    plan?: UserPlan;
+    locale?: UserLocale;
+    isEmailVerified?: boolean;
     createdAt: string;
-    updatedAt: string;
+    updatedAt?: string;
 }
 
 export interface UpdateProfileInput {

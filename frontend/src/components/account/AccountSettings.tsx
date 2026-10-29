@@ -1,16 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     changePassword,
     fetchProfile,
     logoutAllDevices,
     updateProfile,
 } from '@/lib/account-api';
+import { tokenStorage } from '@/lib/api';
 import { UserProfile } from '@/types/account';
+import { useAuth } from '@/context/AuthContext';
 import { ConfirmModal } from './ConfirmModal';
 
 export function AccountSettings() {
+    const router = useRouter();
+    const { user: authUser, setUser: setAuthUser, logout } = useAuth();
+
     const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'sessions'>('profile');
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
@@ -46,22 +52,37 @@ export function AccountSettings() {
             .then((data) => {
                 if (!isMounted) return;
                 setProfile(data);
-                setName(data.name || '');
+                setName(data.name || authUser?.name || '');
                 setPhone(data.phone || '');
-                setAvatarUrl(data.avatarUrl || '');
+                setAvatarUrl(data.avatarUrl || authUser?.avatarUrl || '');
                 setLoading(false);
             })
             .catch((err: unknown) => {
                 if (!isMounted) return;
+                if (authUser) {
+                    setProfile({
+                        id: authUser.id,
+                        email: authUser.email,
+                        name: authUser.name,
+                        avatarUrl: authUser.avatarUrl,
+                        role: authUser.role,
+                        plan: authUser.plan,
+                        locale: authUser.locale,
+                        isEmailVerified: authUser.isEmailVerified,
+                        createdAt: authUser.createdAt,
+                    });
+                    setName(authUser.name || '');
+                    setAvatarUrl(authUser.avatarUrl || '');
+                }
                 const msg = err instanceof Error ? err.message : 'Không thể tải thông tin tài khoản';
-                setToast({ type: 'error', message: msg });
+                showToast('error', msg);
                 setLoading(false);
             });
 
         return () => {
             isMounted = false;
         };
-    }, []);
+    }, [authUser]);
 
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -73,6 +94,17 @@ export function AccountSettings() {
                 avatarUrl,
             });
             setProfile(updated);
+
+            if (authUser) {
+                const nextUser = {
+                    ...authUser,
+                    name: updated.name,
+                    avatarUrl: updated.avatarUrl,
+                };
+                setAuthUser(nextUser);
+                tokenStorage.setUser(nextUser);
+            }
+
             showToast('success', 'Cập nhật hồ sơ thành công!');
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Lỗi khi cập nhật hồ sơ';
@@ -116,7 +148,11 @@ export function AccountSettings() {
             setLogoutLoading(true);
             const res = await logoutAllDevices();
             setIsLogoutModalOpen(false);
+            logout();
             showToast('success', res.message || 'Đã đăng xuất khỏi mọi thiết bị thành công!');
+            setTimeout(() => {
+                router.push('/login');
+            }, 1500);
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Lỗi khi đăng xuất các thiết bị';
             showToast('error', msg);
@@ -214,19 +250,26 @@ export function AccountSettings() {
                                     style={{ backgroundImage: `url(${avatarUrl})` }}
                                 />
                             ) : (
-                                (name || 'U').charAt(0).toUpperCase()
+                                (name || profile?.name || 'U').charAt(0).toUpperCase()
                             )}
                         </div>
                         <div>
                             <h3 className="font-semibold text-neutral-900 dark:text-white">
-                                {name || 'Người dùng'}
+                                {name || profile?.name || 'Người dùng'}
                             </h3>
                             <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                                {profile?.email}
+                                {profile?.email || authUser?.email}
                             </p>
-                            <span className="inline-block mt-2 text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-400">
-                                Đã xác thực
-                            </span>
+                            <div className="flex gap-2 mt-2">
+                                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-400">
+                                    {profile?.isEmailVerified ? 'Email đã xác thực' : 'Đã xác thực'}
+                                </span>
+                                {profile?.role && (
+                                    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 uppercase">
+                                        {profile.role}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -250,7 +293,7 @@ export function AccountSettings() {
                             </label>
                             <input
                                 type="email"
-                                value={profile?.email || ''}
+                                value={profile?.email || authUser?.email || ''}
                                 disabled
                                 className="w-full px-4 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-800/50 text-neutral-500 cursor-not-allowed"
                             />
