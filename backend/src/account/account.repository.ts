@@ -21,6 +21,9 @@ export class AccountRepository {
       phone: '0901234567',
       theme: 'system',
       locale: 'vi',
+      isDeleted: false,
+      deletedAt: null,
+      scheduledPermanentDeletionAt: null,
       tokenVersion: 1,
       passwordHash: demoPassword.hash,
       passwordSalt: demoPassword.salt,
@@ -108,6 +111,46 @@ export class AccountRepository {
     };
     this.users.set(id, updatedUser);
     return Promise.resolve({ ...updatedUser });
+  }
+
+  markAccountForDeletion(
+    id: string,
+    scheduledDate: Date,
+  ): Promise<UserAccount | null> {
+    const user = this.users.get(id);
+    if (!user) {
+      return Promise.resolve(null);
+    }
+    const updatedUser: UserAccount = {
+      ...user,
+      isDeleted: true,
+      deletedAt: new Date(),
+      scheduledPermanentDeletionAt: scheduledDate,
+      tokenVersion: user.tokenVersion + 1,
+      updatedAt: new Date(),
+    };
+    this.users.set(id, updatedUser);
+    return Promise.resolve({ ...updatedUser });
+  }
+
+  restoreAccount(id: string): Promise<UserAccount | null> {
+    const user = this.users.get(id);
+    if (!user) {
+      return Promise.resolve(null);
+    }
+    const updatedUser: UserAccount = {
+      ...user,
+      isDeleted: false,
+      deletedAt: null,
+      scheduledPermanentDeletionAt: null,
+      updatedAt: new Date(),
+    };
+    this.users.set(id, updatedUser);
+    return Promise.resolve({ ...updatedUser });
+  }
+
+  hardDeleteAccount(id: string): Promise<boolean> {
+    return Promise.resolve(this.users.delete(id));
   }
 
   incrementTokenVersion(id: string): Promise<number | null> {

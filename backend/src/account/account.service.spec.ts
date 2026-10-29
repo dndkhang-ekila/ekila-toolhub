@@ -27,6 +27,7 @@ describe('AccountService', () => {
       expect(profile.email).toBe('user@ekila.vn');
       expect(profile.theme).toBe('system');
       expect(profile.locale).toBe('vi');
+      expect(profile.isDeleted).toBe(false);
     });
 
     it('should throw NotFoundException for non-existent user', async () => {
@@ -114,6 +115,82 @@ describe('AccountService', () => {
         newPassword: 'Password123@',
       });
       expect(verifyNewPass.success).toBe(true);
+    });
+  });
+
+  describe('requestDeleteAccount [FR-ACC-05]', () => {
+    it('should throw NotFoundException if user does not exist', async () => {
+      await expect(
+        service.requestDeleteAccount('unknown_usr', {
+          password: 'Password123@',
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException if password is wrong', async () => {
+      await expect(
+        service.requestDeleteAccount('usr_demo_123', {
+          password: 'WrongPassword!',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should successfully schedule account deletion for 30 days and invalidate sessions', async () => {
+      const res = await service.requestDeleteAccount('usr_demo_123', {
+        password: 'Password123@',
+      });
+
+      expect(res.success).toBe(true);
+      expect(res.gracePeriodDays).toBe(30);
+      expect(res.scheduledPermanentDeletionAt).toBeInstanceOf(Date);
+
+      // Kiểm tra trạng thái đã chuyển sang isDeleted = true
+      const profile = await service.getProfile('usr_demo_123');
+      expect(profile.isDeleted).toBe(true);
+      expect(profile.deletedAt).toBeInstanceOf(Date);
+      expect(profile.scheduledPermanentDeletionAt).toBeInstanceOf(Date);
+    });
+
+    it('should throw BadRequestException if account is already marked for deletion', async () => {
+      await service.requestDeleteAccount('usr_demo_123', {
+        password: 'Password123@',
+      });
+
+      await expect(
+        service.requestDeleteAccount('usr_demo_123', {
+          password: 'Password123@',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('restoreAccount [FR-ACC-05]', () => {
+    it('should throw NotFoundException if user does not exist', async () => {
+      await expect(service.restoreAccount('unknown_usr')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw BadRequestException if account is not marked for deletion', async () => {
+      await expect(service.restoreAccount('usr_demo_123')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should successfully restore account and cancel pending deletion', async () => {
+      // Đầu tiên kích hoạt xoá
+      await service.requestDeleteAccount('usr_demo_123', {
+        password: 'Password123@',
+      });
+
+      // Sau đó khôi phục
+      const res = await service.restoreAccount('usr_demo_123');
+      expect(res.success).toBe(true);
+
+      const profile = await service.getProfile('usr_demo_123');
+      expect(profile.isDeleted).toBe(false);
+      expect(profile.deletedAt).toBeNull();
+      expect(profile.scheduledPermanentDeletionAt).toBeNull();
     });
   });
 
