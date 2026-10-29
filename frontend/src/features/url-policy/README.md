@@ -1,33 +1,37 @@
-# KAN-38 / FR-URL-04 FE
+# KAN-38 / FR-URL-04 FE — tích hợp KAN-110
 
-Giao diện riêng tại `/url-check`, chỉ có chức năng nhập URL và đối chiếu tên miền trước khi rút gọn. Không thêm tính năng tạo link, QR, lịch sử, database hoặc backend.
+Giao diện riêng tại /url-check gọi POST /api/v1/url-policy/check của KAN-110. Không tạo QR, link ngắn, database hoặc thay đổi entity.
 
-## Đã triển khai
+## Luồng thực tế
 
-- Giao diện trắng–xanh, trạng thái chưa nhập, input sai, link ToolHub, link dịch vụ rút gọn và chưa phát hiện tên miền bị chặn.
-- Kiểm tra http/https, tối đa 2.048 ký tự, chặn thông tin đăng nhập/ký tự điều khiển trong URL.
-- Phân tích hostname bằng URL API; đối chiếu tên miền chính và subdomain theo ranh giới dấu chấm. Không tìm chuỗi trong toàn bộ URL nên tránh chặn nhầm query hoặc tên miền như bit.ly.example.com.
-- Chuẩn hóa chữ hoa/thường và dấu chấm cuối hostname trước khi so sánh.
-- Xóa/nhập lại có quản lý focus; input liên kết với hướng dẫn/lỗi, kết quả có role alert/status. Giao diện dùng được bằng bàn phím và trên mobile.
+Client kiểm tra cú pháp HTTP(S), độ dài 2048 ký tự và credentials/ký tự cấm; mọi URL qua bước cú pháp đều gửi đến backend, kể cả domain dịch vụ rút gọn đã biết. Máy chủ quyết định domain ToolHub, danh sách dịch vụ và kết quả kiểm tra redirect. Không dùng kết quả local để hiển thị thành công khi BE chưa trả lời.
 
-## Cấu hình tên miền
+Có trạng thái đang kiểm tra, chặn ToolHub/dịch vụ rút gọn/đích redirect/địa chỉ nội bộ, URL sai, giới hạn lượt gọi và chưa thể xác minh. Lỗi mạng, timeout, API chưa triển khai, phản hồi không đúng hợp đồng và HTTP 503 đều không trở thành kết quả cho phép. HTTP 429 hiển thị thời gian Retry-After. Nút gửi bị khóa khi đang kiểm tra; sửa/xóa URL hoặc rời trang hủy yêu cầu, không hiển thị kết quả cũ. Client timeout 10 giây; BE giới hạn 5 giây. Không gửi cookie hoặc referrer tới API, không ghi log URL, không điều hướng trình duyệt đến URL nhập vào.
 
-`NEXT_PUBLIC_TOOLHUB_DOMAINS` là danh sách domain ToolHub, phân tách dấu phẩy, ví dụ `toolhub.example,links.toolhub.example`. Đây là ví dụ, không phải domain production đã xác nhận. Hostname đang phục vụ giao diện cũng được kiểm tra, không phụ thuộc cổng.
+Thành công chỉ có nghĩa máy chủ chưa phát hiện domain/HTTP redirect bị cấm tại thời điểm kiểm tra. Không chứng nhận nội dung an toàn và không cấp quyền bỏ qua kiểm tra khi tạo link.
 
-Danh sách dịch vụ rút gọn mặc định ở `lib/check-url-policy.ts` là dữ liệu ban đầu cho FE, chưa phải danh sách được nhóm/backend phê duyệt. Cần đồng bộ với KAN-110 trước tích hợp chính thức.
+## Cấu hình và chạy hai nhánh
 
-Thay biến NEXT_PUBLIC_* cần khởi động lại frontend; production phải build lại. Không thêm thư viện mới.
+FE: NEXT_PUBLIC_API_URL=http://127.0.0.1:4110/api/v1, chạy npm run dev -- --hostname 127.0.0.1 --port 3110.
 
-## Giới hạn và tích hợp
+BE trên nhánh feature/FR-URL-04-BE-url-policy: PORT=4110, FRONTEND_URL=http://127.0.0.1:3110, TOOLHUB_DOMAINS=localhost,127.0.0.1 rồi npm run build và npm run start:prod. NODE_ENV production yêu cầu TOOLHUB_DOMAINS có giá trị. Thêm toàn bộ domain triển khai thực tế, không dùng domain minh họa thay cho domain thật. Chỉ dùng localhost/cổng thử cho local.
 
-Đây là kiểm tra tên miền phía client, không xác nhận link an toàn, không truy cập URL đích, không theo redirect và không tạo link ngắn. Vì kiểm tra đồng bộ nên không tạo spinner hoặc độ trễ giả.
+Mở http://127.0.0.1:3110/url-check. Cần chạy cả hai nhánh riêng; không cần gộp BE vào nhánh FE. Khi đổi NEXT_PUBLIC_API_URL phải khởi động lại dev server hoặc build lại production. Production dùng URL API HTTPS và FRONTEND_URL đúng origin FE để CORS hoạt động.
 
-KAN-110 phải kiểm tra lại ở máy chủ, dùng danh sách domain thống nhất và áp dụng cho mọi đường tạo/cập nhật link. Không được tin kết quả FE để bỏ qua kiểm tra backend. Chưa gọi API KAN-110 vì nhóm chưa chốt endpoint/hợp đồng; kết quả chỉ ghi “Chưa phát hiện tên miền bị chặn”. Lỗi mạng/thử lại sẽ bổ sung khi tích hợp API thực tế.
+NEXT_PUBLIC_TOOLHUB_DOMAINS không còn được form sử dụng để quyết định kết quả; TOOLHUB_DOMAINS ở BE là cấu hình quyết định. Hàm checkUrlPolicy ở lib vẫn có hỗ trợ so khớp domain cho unit test, nhưng form chỉ dùng phần kiểm tra cú pháp và không giữ danh sách chặn riêng cho luồng thực tế.
 
-## Kiểm tra
+## Kiểm thử
 
-`node --test test/url-policy.unit.mjs` kiểm tra các trường hợp chuẩn hóa và nhầm lẫn hostname. `node --test test/url-policy.e2e.mjs` kiểm tra UI khi frontend đang chạy; TEST_BASE_URL mặc định http://localhost:3104. Bộ kiểm tra trình duyệt dùng PLAYWRIGHT_MODULE và PLAYWRIGHT_EXECUTABLE_PATH trỏ tới Playwright/Chromium có sẵn bên ngoài dự án, không sửa dependencies.
+node --test test/url-policy.unit.mjs test/url-policy.e2e.mjs
 
-Chạy `npm run lint`, `npx tsc --noEmit` và `npm run build` để kiểm tra frontend. Lockfile develop hiện không chạy được npm ci với npm 11; môi trường riêng có thể dùng npm install --ignore-scripts --package-lock=false, không sửa lockfile trong task này.
+TEST_BASE_URL mặc định http://127.0.0.1:3110. Cần BE chạy thật 4110 và FE dùng API tương ứng. PLAYWRIGHT_MODULE và PLAYWRIGHT_EXECUTABLE_PATH có thể trỏ tới Playwright/Chromium có sẵn bên ngoài dự án, không thay dependency. Các ca URL thường, ToolHub và dịch vụ rút gọn chạy với BE thật. Các ca lỗi mạng/503/429/phản hồi sai/đổi input dùng intercept có kiểm soát; chúng không phải bằng chứng gọi website ngoài thật.
 
-Kiểm tra local ngày 28/10/2026: 5/5 unit test, 7/7 kiểm thử trình duyệt, ESLint, TypeScript và build production đạt. Form trạng thái bị chặn vừa desktop 1366×768 và 1280×720 không cần cuộn; mobile 360 px không tràn ngang, cho phép cuộn dọc để giữ chữ và nút dễ sử dụng.
+Chạy npm run lint, npx tsc --noEmit, npm run build. Không thay lockfile trong task này.
+
+## Phụ thuộc nghiệm thu
+
+FE và BE được review riêng vào develop; triển khai BE trước FE mới. API tạo/sửa/import link chưa có trên develop tại fb8b921. Nhóm quản lý link phải gọi UrlPolicyService.assertCanShorten ngay trước khi lưu từng URL; không tin cờ allowed do client gửi. Hai task này đã có luồng kiểm tra FE–BE, chưa thay thế phần tạo/lưu link của nhóm hoặc kiểm tra malware thuộc FR-URL-03.
+
+## Kết quả ngày 29/10/2026
+
+17/17 bài kiểm thử FE đạt (5 unit, 12 trình duyệt). Kiểm thử smoke trên trình duyệt với BE thật: example.com trả 200, Bitly và hostname ToolHub cấu hình local trả 422; kết quả thành công/bị chặn đều vừa viewport 1280x720, không tràn ngang. Bộ kiểm thử cũng kiểm tra mobile 360px và desktop 1366x768, 1280x720. ESLint, TypeScript và build production đạt. Các ca lỗi mạng/429/503/redirect trong bộ FE có dùng intercept như mô tả trên; backend có bộ kiểm thử redirect riêng. Không thay đổi database hoặc entity.

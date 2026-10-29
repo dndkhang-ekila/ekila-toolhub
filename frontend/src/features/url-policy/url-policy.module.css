@@ -273,7 +273,12 @@
   color: #fff;
   box-shadow: 0 4px 10px rgb(37 99 235 / 12%);
 }
-.primary:hover {
+.primary:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.primary:hover:not(:disabled) {
   background: #1d4ed8;
 }
 .secondary {

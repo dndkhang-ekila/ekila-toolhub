@@ -8,7 +8,7 @@ const { chromium } = await import(
     ? pathToFileURL(path.join(process.env.PLAYWRIGHT_MODULE, "index.mjs")).href
     : "playwright"
 );
-const base = process.env.TEST_BASE_URL || "http://localhost:3104";
+const base = process.env.TEST_BASE_URL || "http://127.0.0.1:3110";
 let browser;
 before(async () => {
   browser = await chromium.launch({
@@ -53,7 +53,7 @@ test("blank input shows an accessible error and returns focus to the field", asy
     true,
   );
 });
-test("a shortener is blocked without sending any backend or destination requests", async (t) => {
+test("a shortener is blocked by the real backend without browser destination requests", async (t) => {
   const page = await open(t);
   let requestCount = 0;
   page.on("request", (request) => {
@@ -73,7 +73,7 @@ test("a shortener is blocked without sending any backend or destination requests
     await page.locator("section [role=alert]").innerText(),
     /bit.ly/,
   );
-  assert.equal(requestCount, 0);
+  assert.equal(requestCount, 1);
   assert.equal(
     await page
       .getByRole("button", { name: "Rút gọn liên kết", exact: true })
@@ -99,7 +99,9 @@ test("editing clears a stale error, and a normal URL produces a qualified result
     .fill("https://example.com/?source=bit.ly");
   assert.equal(await page.locator("section [role=alert]").count(), 0);
   await page.getByRole("button", { name: "Kiểm tra liên kết" }).click();
-  await page.locator("section [role=status]").waitFor();
+  await page
+    .getByRole("heading", { name: "Chưa phát hiện tên miền bị chặn" })
+    .waitFor();
   assert.match(
     await page.locator("section [role=status]").innerText(),
     /Chưa phát hiện tên miền bị chặn/,
@@ -107,6 +109,13 @@ test("editing clears a stale error, and a normal URL produces a qualified result
   assert.match(
     await page.locator("section [role=status]").innerText(),
     /vẫn cần kiểm tra lại/,
+  );
+  await page.setViewportSize({ width: 1280, height: 720 });
+  assert.equal(
+    await page.evaluate(
+      () => document.documentElement.scrollHeight <= innerHeight + 1,
+    ),
+    true,
   );
 });
 test("clear and enter-another actions reset the form and preserve keyboard focus", async (t) => {
@@ -154,6 +163,131 @@ test("desktop form fits one viewport at 1366x768 and 1280x720", async (t) => {
     await page.evaluate(
       () => document.documentElement.scrollHeight <= window.innerHeight + 1,
     ),
+    true,
+  );
+});
+
+test("503 never becomes an allowed result and supports retry", async (t) => {
+  const page = await open(t);
+  await page.route("**/url-policy/check", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ error: { code: "URL_VERIFICATION_FAILED" } }),
+    }),
+  );
+  await submit(page, "https://example.com/");
+  await page
+    .getByRole("heading", { name: "Chưa thể xác minh liên kết" })
+    .waitFor();
+  assert.equal(await page.locator("section [role=status]").count(), 0);
+  assert.equal(
+    await page.getByRole("button", { name: "Kiểm tra lại" }).isEnabled(),
+    true,
+  );
+});
+
+test("429 displays the server retry delay", async (t) => {
+  const page = await open(t);
+  await page.route("**/url-policy/check", (route) =>
+    route.fulfill({
+      status: 429,
+      contentType: "application/json",
+      headers: {
+        "Retry-After": "45",
+        "Access-Control-Expose-Headers": "Retry-After",
+      },
+      body: JSON.stringify({ error: { code: "RATE_LIMITED" } }),
+    }),
+  );
+  await submit(page, "https://example.com/");
+  await page.getByText(/thử lại sau 45 giây/).waitFor();
+});
+
+test("redirect rejection is displayed as a blocked URL", async (t) => {
+  const page = await open(t);
+  await page.route("**/url-policy/check", (route) =>
+    route.fulfill({
+      status: 422,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: {
+          code: "REDIRECT_TARGET_NOT_ALLOWED",
+          reason: "SHORTENER_DOMAIN_NOT_ALLOWED",
+        },
+      }),
+    }),
+  );
+  await submit(page, "https://example.com/");
+  await page
+    .getByText(/chuyển hướng đến tên miền hoặc địa chỉ không được phép/)
+    .waitFor();
+  assert.equal(
+    await page.locator("#original-url").getAttribute("aria-invalid"),
+    "true",
+  );
+});
+
+test("network errors and malformed 200 responses never show approval", async (t) => {
+  const page = await open(t);
+  await page.route("**/url-policy/check", (route) => route.abort("failed"));
+  await submit(page, "https://example.com/");
+  await page
+    .getByRole("heading", { name: "Chưa thể xác minh liên kết" })
+    .waitFor();
+  await page.unroute("**/url-policy/check");
+  await page.route("**/url-policy/check", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: '{"allowed":true}',
+    }),
+  );
+  await page.getByRole("button", { name: "Kiểm tra lại" }).click();
+  await page
+    .getByRole("heading", { name: "Chưa thể xác minh liên kết" })
+    .waitFor();
+  assert.equal(await page.locator("section [role=status]").count(), 0);
+});
+
+test("editing cancels a pending check and discards its stale result", async (t) => {
+  const page = await open(t);
+  let release;
+  const waiting = new Promise((resolve) => {
+    release = resolve;
+  });
+  let entered;
+  const started = new Promise((resolve) => {
+    entered = resolve;
+  });
+  await page.route("**/url-policy/check", async (route) => {
+    entered();
+    await waiting;
+    await route
+      .fulfill({
+        status: 422,
+        contentType: "application/json",
+        body: JSON.stringify({
+          error: { code: "SHORTENER_DOMAIN_NOT_ALLOWED" },
+        }),
+      })
+      .catch(() => {});
+  });
+  await submit(page, "https://bit.ly/old");
+  await started;
+  assert.equal(
+    await page.getByRole("button", { name: "Đang kiểm tra…" }).isDisabled(),
+    true,
+  );
+  await page
+    .getByLabel("Nhập URL gốc", { exact: true })
+    .fill("https://example.com/new");
+  release();
+  await page.waitForTimeout(150);
+  assert.equal(await page.locator("section [role=alert]").count(), 0);
+  assert.equal(await page.locator("section [role=status]").count(), 0);
+  assert.equal(
+    await page.getByRole("button", { name: "Kiểm tra liên kết" }).isEnabled(),
     true,
   );
 });
