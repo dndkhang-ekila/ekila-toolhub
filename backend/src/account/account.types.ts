@@ -14,6 +14,9 @@ export interface UserProfile {
   phone?: string;
   theme: ThemePreference;
   locale: LocalePreference;
+  isDeleted?: boolean;
+  deletedAt?: Date | null;
+  scheduledPermanentDeletionAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,4 +25,11 @@ export interface UserAccount extends UserProfile {
   passwordHash: string;
   passwordSalt: string;
   tokenVersion: number;
+}
+
+export interface DeleteAccountResponse {
+  success: boolean;
+  message: string;
+  scheduledPermanentDeletionAt: Date;
+  gracePeriodDays: number;
 }
