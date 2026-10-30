@@ -14,6 +14,7 @@ export function Navbar() {
 
   const navLinks = [
     { href: '/', label: t('nav.home') },
+    { href: '/shorten-url', label: t('tools.shortenUrl') || 'Rút gọn link' },
     { href: '/account', label: t('nav.account') },
   ];
 
