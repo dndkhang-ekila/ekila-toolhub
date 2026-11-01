@@ -40,7 +40,14 @@ Thumbs.db
 
 .vercel
 
-backend/data/
+# Database files
 *.sqlite
+*.sqlite-journal
+*.db
+backend/data/
+
+# Specification documents
+*.docx
+
 *.sqlite-shm
 *.sqlite-wal

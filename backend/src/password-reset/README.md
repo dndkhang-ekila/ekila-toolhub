@@ -7,7 +7,7 @@
 - `backend/src/auth/entities/user.entity.ts` được lấy nguyên byte từ nhánh FR-ACC-01 BE tại `7a46d3ba6c184633ee6a1ce458b0c1c83f9ed505`. Không thêm hoặc sửa thuộc tính nào của User.
 - Entity mới: `PasswordResetToken` và `PasswordResetMailJob`. Entity mail job là outbox để yêu cầu gửi không bị mất khi backend dừng và không làm phản hồi API phụ thuộc việc email có tồn tại.
 - Migration tạo bảng còn thiếu từ metadata, không bật synchronize, không ALTER bảng users sẵn có. Nếu users thiếu cột mà entity yêu cầu thì dừng để nhóm xử lý schema, không tự sửa.
-- Chưa nhập toàn bộ AuthModule hoặc trang đăng nhập của nhánh FR-ACC-01. Module account và 2FA của nhóm giữ nguyên, vẫn có dữ liệu Map riêng; reset không tự chuyển đổi các module đó.
+- Đã hợp nhất develop tại 4013e32: giữ AuthModule, LinksModule và các trang đăng nhập của nhóm. Auth và reset dùng cùng DatabaseModule/DataSource với synchronize=false; module account và 2FA vẫn có dữ liệu Map riêng, reset không tự chuyển đổi các module đó.
 
 ## Chạy local
 
@@ -78,7 +78,8 @@ Không trả token hoặc chi tiết provider/database qua API. Response không 
 - Không tin X-Forwarded-For mặc định. Khi đặt sau proxy phải cấu hình trust proxy theo đúng hạ tầng, không bật tin mọi proxy.
 - Bộ đếm hiện nằm trong RAM, phù hợp một tiến trình local. Trước production nhiều instance cần limiter dùng chung và cơ chế chống bot/CAPTCHA theo chính sách nhóm; reset backend này chưa tự triển khai Redis hoặc CAPTCHA.
 - SQLite ghi được serialize theo DataSource; claim có điều kiện và transaction bảo vệ token, có retry giới hạn khi SQLite busy/locked. Cần kiểm thử hạ tầng riêng trước khi chạy nhiều instance.
-- Khi FR-ACC-01 BE được merge, dùng một DataSource duy nhất. Gộp cấu hình vào DatabaseModule và giữ cả ba entity; không giữ hai TypeOrmModule.forRoot cùng lúc. Không cần sửa User entity để thêm quan hệ ngược.
+- AuthModule đã dùng chung DataSource trong DatabaseModule với cả ba entity. Không giữ TypeOrmModule.forRoot thứ hai tại AppModule, không tự synchronize/ALTER users. Trên database mới phải chạy db:init trước khi dùng API đăng ký/reset; database cũ phải tương thích User entity hiện tại. Không cần sửa User entity để thêm quan hệ ngược.
+- Auth của nhóm dùng SMTP_PASS/MAIL_FROM, reset dùng SMTP_PASSWORD/SMTP_FROM. Cả hai nhóm biến được giữ trong .env.example; điền cấu hình riêng cho từng module khi triển khai, không ghi credentials vào Git.
 - Chặn log body/token/URL reset tại proxy/APM. SMTP worker chỉ log thông báo lỗi chung, không log lỗi gốc có thể chứa nội dung thư.
 
 ## Kiểm thử
@@ -92,7 +93,7 @@ npm test -- --runInBand --coverage --collectCoverageFrom="password-reset/**/*.ts
 
 Kiểm thử tích hợp dùng SQLite file tạm, HTTP local và hộp thư tạm; không dùng Gmail hoặc database local đang làm việc. Bao gồm token đúng 30 phút, dùng một lần, cạnh tranh hai request, rollback khi ghi User lỗi, giữ schema users, mã hóa outbox, retry/recovery lease, policy, rate limit và lưu bền khi mở lại database.
 
-Không chạy thử email thật trong test tự động. Chỉ cấu hình SMTP và gửi email kiểm thử riêng khi chủ tài khoản cho phép. Việc đăng nhập thực tế bằng JWT/Google vẫn cần FR-ACC-01 được tích hợp và kiểm thử chung.
+Không chạy thử email thật trong test tự động. Chỉ cấu hình SMTP và gửi email kiểm thử riêng khi chủ tài khoản cho phép. Bài password-reset-auth.integration.spec.ts chạy HTTP đăng ký → xác minh → đăng nhập → reset → từ chối JWT cũ/mật khẩu cũ → đăng nhập bằng mật khẩu mới, với email giả lập và SQLite tạm. Xác thực Google và dữ liệu Map của account/2FA không nằm trong bài này.
 
 ### Kết quả kiểm tra local ngày 28/10/2026
 
