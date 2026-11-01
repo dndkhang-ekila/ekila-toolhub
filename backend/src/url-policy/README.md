@@ -46,11 +46,11 @@ Lỗi có dạng `{"error":{"code":"...","reason":"..."}}`; `reason` chỉ xuấ
 
 ## Tích hợp với tính năng tạo link
 
-Trên develop tại fb8b921 chưa có API tạo/sửa link, repository link hoặc xử lý CSV. Module cung cấp API kiểm tra thật và export `UrlPolicyService`; không tự tạo tính năng lưu link ngoài KAN-110.
+Develop tại 4013e32 đã có LinksModule từ FR-URL-03. Nhánh này giữ module đó và bổ sung API kiểm tra/export UrlPolicyService; chưa tự thay đổi service tạo link của thành viên khác.
 
 Module quản lý link cần import `UrlPolicyModule`, inject `UrlPolicyService` và gọi `await policy.assertCanShorten(input.url)` ngay trước khi lưu URL đích. Phải áp dụng cho tạo link khách/thành viên, sửa URL đích và từng dòng CSV. Chỉ lưu URL do lần gọi hiện tại chấp thuận; không nhận cờ `allowed` từ client, không tái sử dụng kết quả API kiểm tra trước đó như quyền bỏ qua kiểm tra. Lỗi phải dừng thao tác lưu; CSV báo lỗi theo dòng theo hợp đồng import của nhóm.
 
-FE KAN-38 trên nhánh feature/FR-URL-04-FE-url-policy đã nối API này. Client chỉ kiểm tra cú pháp, mọi kết quả domain/redirect do BE quyết định; không cần giữ hai danh sách chặn cho luồng thực tế. FE xử lý lỗi mạng/503/429/phản hồi sai và hủy yêu cầu khi đổi input. Hai nhánh vẫn tách riêng; triển khai BE trước FE mới. Các endpoint ghi link chưa tồn tại nên chưa thể nghiệm thu việc chặn xuyên suốt tạo/sửa/import.
+FE KAN-38 trên nhánh feature/FR-URL-04-FE-url-policy đã nối API này. Client chỉ kiểm tra cú pháp, mọi kết quả domain/redirect do BE quyết định; không cần giữ hai danh sách chặn cho luồng thực tế. FE xử lý lỗi mạng/503/429/phản hồi sai và hủy yêu cầu khi đổi input. Hai nhánh vẫn tách riêng; triển khai BE trước FE mới. LinksModule mới chưa gọi assertCanShorten; cần tích hợp vào mọi đường ghi link để nghiệm thu chặn xuyên suốt tạo/sửa/import.
 
 ## Kiểm tra HTTP và SSRF
 
@@ -93,4 +93,4 @@ FR-URL-03 (dịch vụ kiểm tra URL độc hại), BR-URL-01 (hết hạn link
 - Độ phủ module URL policy: 97,04% statements, 91,25% branches, 99,06% lines.
 - `npx tsc --noEmit`, `npx eslint "{src,apps,libs,test}/**/*.ts"` và `npm run build`: đạt. Không chạy lint auto-fix trên code thành viên khác.
 - Smoke test bản build với transport thật: HTTPS tới `https://example.com/` được chấp thuận; Bitly, ToolHub thử nghiệm và IP loopback bị từ chối. Kiểm thử redirect/DNS rebinding dùng mock có kiểm soát để không truy cập tài nguyên nội bộ.
-- Module chưa được gắn vào endpoint ghi link vì endpoint đó chưa có trên develop. Đây là phần phụ thuộc tích hợp cần nghiệm thu khi nhóm bổ sung tính năng tạo/sửa/import, không được coi API kiểm tra độc lập là bằng chứng đã bảo vệ các thao tác ghi chưa tồn tại.
+- Develop mới đã có endpoint tạo link của nhóm. Module URL policy chưa được gắn vào endpoint đó; cần phối hợp tích hợp trước khi nghiệm thu bảo vệ mọi thao tác ghi, không coi API kiểm tra độc lập là bằng chứng đã bảo vệ tạo/sửa/import.

@@ -1,3 +1,4 @@
+import { UrlPolicyModule } from './url-policy/url-policy.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
@@ -7,10 +8,10 @@ import { AuthModule } from './auth/auth.module';
 import { AccountModule } from './account/account.module';
 import { TwoFactorAuthModule } from './two-factor-auth/two-factor-auth.module';
 import { LinksModule } from './links/links.module';
-import { UrlPolicyModule } from './url-policy/url-policy.module';
 
 @Module({
   imports: [
+    UrlPolicyModule,
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -30,7 +31,6 @@ import { UrlPolicyModule } from './url-policy/url-policy.module';
     AccountModule,
     TwoFactorAuthModule,
     LinksModule,
-    UrlPolicyModule,
   ],
 })
 export class AppModule {}
