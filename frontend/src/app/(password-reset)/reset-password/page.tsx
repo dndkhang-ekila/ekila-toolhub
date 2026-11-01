@@ -5,7 +5,7 @@ import {
   ResetPasswordForm,
 } from "@/features/password-reset/components/reset-password-form";
 
-export const metadata: Metadata = { title: "Đặt lại mật khẩu | ToolHub" };
+export const metadata: Metadata = { title: null };
 
 export default function ResetPasswordPage() {
   return (

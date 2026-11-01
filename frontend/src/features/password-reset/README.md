@@ -2,6 +2,8 @@
 
 Giao diện trắng–xanh dương cho `/forgot-password` và `/reset-password?token=...`, hỗ trợ Việt/Anh và màn hình từ 360 px.
 
+Header chỉ còn logo, đã bỏ hẳn bộ chọn ngôn ngữ và biểu tượng quả địa cầu. Nội dung Việt/Anh đọc tùy chọn toolhub_locale đã lưu của ứng dụng; mặc định tiếng Việt nếu không có hoặc storage bị chặn. Trang không tự ghi lựa chọn hoặc lưu email/token/mật khẩu. AuthShell render title theo ngôn ngữ, hai trang không khai báo title tĩnh riêng.
+
 ## Phạm vi đã triển khai
 
 - Form yêu cầu email, kiểm tra đầu vào, trạng thái tiếp nhận và gửi lại.

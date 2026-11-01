@@ -33,6 +33,15 @@ async function pageFor(t, options = {}) {
   return page;
 }
 
+async function preferredLocale(page, locale) {
+  await page.evaluate((value) => {
+    localStorage.setItem("toolhub_locale", value);
+    window.dispatchEvent(
+      new StorageEvent("storage", { key: "toolhub_locale", newValue: value }),
+    );
+  }, locale);
+}
+
 async function reply(route, status, body, extra = {}) {
   await route.fulfill({
     status,
@@ -254,7 +263,7 @@ test("token validation honors rate-limit cooldown", async (t) => {
   );
 });
 
-test("mobile layout fits 360px and supports language switching", async (t) => {
+test("mobile layout fits 360px and follows the saved language preference", async (t) => {
   const page = await pageFor(t, {
     viewport: { width: 360, height: 800 },
     colorScheme: "dark",
@@ -279,11 +288,119 @@ test("mobile layout fits 360px and supports language switching", async (t) => {
       .evaluate((element) => getComputedStyle(element).backgroundColor),
     "rgb(255, 255, 255)",
   );
-  await page.getByLabel("Ngôn ngữ", { exact: true }).selectOption("en");
+  await preferredLocale(page, "en");
   await heading(page, "Reset your password");
   await page
     .getByText("The passwords do not match.", { exact: true })
     .waitFor();
+});
+
+test("forgot language translates validation and API errors and survives reload/navigation", async (t) => {
+  const page = await pageFor(t);
+  await page.route(apiPattern, (route) => reply(route, 503));
+  await page.goto(`${baseUrl}/forgot-password`);
+  await preferredLocale(page, "en");
+  await heading(page, "Forgot your password?");
+  await page
+    .getByRole("button", { name: "Send reset link", exact: true })
+    .click();
+  await page
+    .getByText("Enter a valid email address.", { exact: true })
+    .waitFor();
+  await page
+    .getByLabel("Email address", { exact: true })
+    .fill("dat@example.com");
+  await page
+    .getByRole("button", { name: "Send reset link", exact: true })
+    .click();
+  await page
+    .getByText(
+      "This service is currently unavailable. Please try again later.",
+      { exact: true },
+    )
+    .waitFor();
+  assert.equal(await page.locator("html").getAttribute("lang"), "en");
+  assert.equal(await page.title(), "Forgot password | ToolHub");
+  assert.equal(await page.locator("head title").count(), 1);
+  await page.reload();
+  await heading(page, "Forgot your password?");
+  assert.equal(await page.locator("html").getAttribute("lang"), "en");
+  await page.goto(`${baseUrl}/reset-password`);
+  await heading(page, "This link is no longer valid");
+  assert.equal(await page.title(), "Reset password | ToolHub");
+  await page
+    .getByRole("link", { name: "Request a new link", exact: true })
+    .click();
+  await heading(page, "Forgot your password?");
+});
+
+test("forgot receipt and resend messages follow language changes without losing form state", async (t) => {
+  const page = await pageFor(t, { viewport: { width: 360, height: 800 } });
+  await page.route(apiPattern, (route) =>
+    reply(route, 202, { message: "accepted" }, { "Retry-After": "2" }),
+  );
+  await page.goto(`${baseUrl}/forgot-password`);
+  await page
+    .getByLabel("Địa chỉ email", { exact: true })
+    .fill("dat@example.com");
+  await preferredLocale(page, "en");
+  assert.equal(
+    await page.getByLabel("Email address", { exact: true }).inputValue(),
+    "dat@example.com",
+  );
+  await page
+    .getByRole("button", { name: "Send reset link", exact: true })
+    .click();
+  await heading(page, "Check your email");
+  await page.getByRole("button", { name: /Send again in/ }).waitFor();
+  assert.equal(
+    await page.getByRole("button", { name: /Send again in/ }).isDisabled(),
+    true,
+  );
+  await page
+    .getByRole("button", { name: "Send another link", exact: true })
+    .click();
+  await page
+    .getByText("Your new request has been received.", { exact: true })
+    .waitFor();
+  await preferredLocale(page, "vi");
+  await heading(page, "Kiểm tra email của bạn");
+  await page
+    .getByText("Yêu cầu gửi lại đã được tiếp nhận.", { exact: true })
+    .waitFor();
+  assert.equal(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+    true,
+  );
+});
+
+test("page stays usable without browser storage and has no language control", async (t) => {
+  const page = await pageFor(t);
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "localStorage", {
+      get() {
+        throw new Error("storage blocked");
+      },
+    });
+  });
+  await page.goto(`${baseUrl}/forgot-password`);
+  await heading(page, "Quên mật khẩu?");
+  assert.equal(
+    await page.getByRole("banner").locator("select, svg").count(),
+    0,
+  );
+});
+
+test("invalid saved language falls back to Vietnamese", async (t) => {
+  const page = await pageFor(t);
+  await page.addInitScript(() =>
+    localStorage.setItem("toolhub_locale", "unsupported"),
+  );
+  await page.goto(`${baseUrl}/forgot-password`);
+  await heading(page, "Quên mật khẩu?");
+  assert.equal(await page.locator("html").getAttribute("lang"), "vi");
 });
 
 test("password policy errors preserve the form without showing server text", async (t) => {
