@@ -6,6 +6,7 @@ import { User } from './auth/entities/user.entity';
 import { AuthModule } from './auth/auth.module';
 import { AccountModule } from './account/account.module';
 import { TwoFactorAuthModule } from './two-factor-auth/two-factor-auth.module';
+import { LinksModule } from './links/links.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { TwoFactorAuthModule } from './two-factor-auth/two-factor-auth.module';
     AuthModule,
     AccountModule,
     TwoFactorAuthModule,
+    LinksModule,
   ],
 })
 export class AppModule {}
