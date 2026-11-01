@@ -25,6 +25,8 @@ describe('AccountService', () => {
       expect(profile).toBeDefined();
       expect(profile.id).toBe('usr_demo_123');
       expect(profile.email).toBe('user@ekila.vn');
+      expect(profile.theme).toBe('system');
+      expect(profile.locale).toBe('vi');
     });
 
     it('should throw NotFoundException for non-existent user', async () => {
@@ -42,6 +44,42 @@ describe('AccountService', () => {
       });
       expect(updated.name).toBe('Nguyen Van B');
       expect(updated.phone).toBe('0987654321');
+    });
+  });
+
+  describe('getPreferences', () => {
+    it('should return user theme and locale preferences', async () => {
+      const prefs = await service.getPreferences('usr_demo_123');
+      expect(prefs).toBeDefined();
+      expect(prefs.theme).toBe('system');
+      expect(prefs.locale).toBe('vi');
+    });
+
+    it('should throw NotFoundException if user not found', async () => {
+      await expect(service.getPreferences('unknown_user')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('updatePreferences', () => {
+    it('should update theme to dark and locale to en successfully', async () => {
+      const updated = await service.updatePreferences('usr_demo_123', {
+        theme: 'dark',
+        locale: 'en',
+      });
+      expect(updated.theme).toBe('dark');
+      expect(updated.locale).toBe('en');
+
+      const current = await service.getPreferences('usr_demo_123');
+      expect(current.theme).toBe('dark');
+      expect(current.locale).toBe('en');
+    });
+
+    it('should throw NotFoundException when updating non-existent user', async () => {
+      await expect(
+        service.updatePreferences('unknown_user', { theme: 'light' }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
