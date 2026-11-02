@@ -1,3 +1,4 @@
+import React, { Suspense } from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -18,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ToolHub - Nền tảng tiện ích QRCode và công cụ tệp đa năng",
+  title: "ToolHub - Tiện ích QRCode và Công cụ tệp đa năng",
   description: "Nền tảng tiện ích QRCode và công cụ tệp đa năng",
 };
 
@@ -47,7 +48,9 @@ export default function RootLayout({
         <ThemeProvider>
           <LanguageProvider>
             <AuthProvider>
-              <Navbar />
+              <Suspense fallback={<div className="h-16" />}>
+                <Navbar />
+              </Suspense>
               <div className="flex-1 flex flex-col">{children}</div>
               <Footer />
             </AuthProvider>
@@ -57,4 +60,3 @@ export default function RootLayout({
     </html>
   );
 }
-
