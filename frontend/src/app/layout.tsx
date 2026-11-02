@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ToolHub - Nền tảng tiện ích QRCode và công cụ tệp đa năng",
+  title: "ToolHub - Tiện ích QRCode và Công cụ tệp đa năng",
   description: "Nền tảng tiện ích QRCode và công cụ tệp đa năng",
 };
 
@@ -60,4 +60,3 @@ export default function RootLayout({
     </html>
   );
 }
-

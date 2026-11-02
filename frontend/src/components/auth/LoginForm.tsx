@@ -204,9 +204,9 @@ export function LoginForm({ redirectUrl = '/' }: LoginFormProps) {
             <span>Ghi nhớ đăng nhập</span>
           </label>
 
-          <span className="text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 cursor-not-allowed" title="Tính năng Quên mật khẩu thuộc mã FR-ACC-03 (P2)">
+          <Link href="/forgot-password" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
             Quên mật khẩu?
-          </span>
+          </Link>
         </div>
 
         <Button
