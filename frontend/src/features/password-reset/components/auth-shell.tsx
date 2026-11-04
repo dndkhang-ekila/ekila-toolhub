@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { createContext, useContext, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useLayoutEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { useLocale } from "@/lib/use-locale";
+import { useLanguage } from "@/context/LanguageContext";
 import { AuthIcon } from "./auth-icons";
 import styles from "../password-reset.module.css";
 
@@ -162,23 +162,10 @@ export function useAuthCopy() {
 export const loginUrl = process.env.NEXT_PUBLIC_LOGIN_URL || "/login";
 
 export function AuthShell({ children }: { children: ReactNode }) {
-  const locale = useLocale();
-  const pathname = usePathname();
+  const { locale } = useLanguage();
   const t = messages[locale];
-  useEffect(() => {
-    const previousLanguage = document.documentElement.lang;
-    return () => {
-      document.documentElement.lang = previousLanguage;
-    };
-  }, []);
-  useEffect(() => {
-    document.documentElement.lang = locale;
-  }, [locale]);
   return (
     <AuthContext.Provider value={{ t, locale }}>
-      <title>
-        {pathname === "/reset-password" ? t.resetPageTitle : t.forgotPageTitle}
-      </title>
       <div className={styles.shell} lang={locale}>
         <main className={styles.main}>
           <div className={styles.authContent}>
@@ -225,10 +212,6 @@ export function AuthShell({ children }: { children: ReactNode }) {
             {t.privacy}
           </p>
         </main>
-        <footer className={styles.footer}>
-          <span>© ToolHub</span>
-          <span>{t.footer}</span>
-        </footer>
       </div>
     </AuthContext.Provider>
   );
@@ -245,6 +228,12 @@ export function AuthCard({
   description: string;
   children?: ReactNode;
 }) {
+  const { t } = useAuthCopy();
+  const pathname = usePathname();
+  useLayoutEffect(() => {
+    document.title =
+      pathname === "/reset-password" ? t.resetPageTitle : t.forgotPageTitle;
+  });
   return (
     <section className={styles.card} aria-labelledby="auth-title">
       <div className={styles.iconBadge}>

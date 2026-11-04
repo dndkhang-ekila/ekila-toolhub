@@ -4,6 +4,11 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE ? pathToFileURL(path.join(process.env.PLAYWRIGHT_MODULE, "index.mjs")).href : "playwright");
 const base = process.env.TEST_BASE_URL || "http://localhost:3000";
+const titles = {
+  "/forgot-password": { vi: "Quên mật khẩu | ToolHub", en: "Forgot password | ToolHub" },
+  "/reset-password": { vi: "Đặt lại mật khẩu | ToolHub", en: "Reset password | ToolHub" },
+  "/url-check": { vi: "Kiểm tra liên kết | ToolHub", en: "Check a link | ToolHub" },
+};
 const cases = [{ path: "/forgot-password", label: "Địa chỉ email", value: "header@example.test", heading: "Forgot your password?", enLabel: "Email address" }, { path: "/reset-password?token=sample-shared-navbar", label: "Mật khẩu mới", value: "Demo-password-2026", heading: "Reset your password", enLabel: "New password" }];
 let browser;
 before(async () => { browser = await chromium.launch({ headless: true, executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH }); });
@@ -43,8 +48,22 @@ test("shared Navbar language switching preserves task form values", async t => {
     await page.getByRole("banner").getByRole("button", { name: "Chọn ngôn ngữ hiển thị" }).click();
     await page.getByRole("option", { name: /English/ }).click();
     await page.getByRole("heading", { name: item.heading, exact: true }).waitFor();
+    await page.waitForFunction(expected => document.title === expected, titles[item.path.split("?")[0]].en);
+    assert.equal(await page.locator("head title").count(), 1);
     assert.equal(await page.getByLabel(item.enLabel, { exact: true }).inputValue(), item.value);
     await page.getByRole("banner").getByRole("button", { name: "Select display language" }).click();
     await page.getByRole("option", { name: /Tiếng Việt/ }).click();
+    await page.waitForFunction(expected => document.title === expected, titles[item.path.split("?")[0]].vi);
+  }
+});
+
+test("task metadata provides one nonempty title before JavaScript runs", async t => {
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  t.after(() => context.close());
+  const page = await context.newPage();
+  for (const item of cases) {
+    await page.goto(base + item.path);
+    assert.equal(await page.title(), titles[item.path.split("?")[0]].vi);
+    assert.equal(await page.locator("head title").count(), 1);
   }
 });
