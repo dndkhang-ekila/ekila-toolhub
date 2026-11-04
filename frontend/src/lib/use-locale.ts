@@ -1,39 +1,46 @@
-"use client";
+'use client';
 
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore } from 'react';
 
-export type Locale = "vi" | "en";
+export type Locale = 'vi' | 'en';
 
-const storageKey = "toolhub_locale";
-const changedEvent = "toolhub:locale-change";
+export const LOCALE_STORAGE_KEY = 'toolhub_locale';
+export const LOCALE_CHANGED_EVENT = 'toolhub:locale-change';
+export const DEFAULT_LOCALE: Locale = 'vi';
 
-function getLocale(): Locale {
+export function getLocale(): Locale {
+  if (typeof window === 'undefined') return DEFAULT_LOCALE;
   try {
-    const saved = window.localStorage.getItem(storageKey);
-    if (saved === "vi" || saved === "en") return saved;
-    return "vi";
+    const saved = window.localStorage.getItem(LOCALE_STORAGE_KEY);
+    if (saved === 'vi' || saved === 'en') return saved;
+    return DEFAULT_LOCALE;
   } catch {
-    return "vi";
+    return DEFAULT_LOCALE;
   }
 }
 
-function subscribe(changed: () => void) {
-  const storageChanged = (event: StorageEvent) => {
-    if (event.key === storageKey || event.key === null) changed();
+function subscribe(onStoreChange: () => void) {
+  if (typeof window === 'undefined') return () => {};
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === LOCALE_STORAGE_KEY || event.key === null) onStoreChange();
   };
-  window.addEventListener("storage", storageChanged);
-  window.addEventListener(changedEvent, changed);
+  window.addEventListener('storage', handleStorage);
+  window.addEventListener(LOCALE_CHANGED_EVENT, onStoreChange);
   return () => {
-    window.removeEventListener("storage", storageChanged);
-    window.removeEventListener(changedEvent, changed);
+    window.removeEventListener('storage', handleStorage);
+    window.removeEventListener(LOCALE_CHANGED_EVENT, onStoreChange);
   };
 }
 
-export function useLocale() {
-  const locale = useSyncExternalStore(
+/**
+ * Hook useLocale thống nhất cho toàn bộ hệ thống ToolHub.
+ * Đọc trực tiếp từ localStorage key 'toolhub_locale', lắng nghe event 'toolhub:locale-change'
+ * và fallback mặc định là 'vi' theo đúng tiêu chuẩn.
+ */
+export function useLocale(): Locale {
+  return useSyncExternalStore(
     subscribe,
     getLocale,
-    () => "vi" as const,
+    () => DEFAULT_LOCALE,
   );
-  return locale;
 }

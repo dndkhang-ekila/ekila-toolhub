@@ -376,7 +376,7 @@ test("forgot receipt and resend messages follow language changes without losing 
   );
 });
 
-test("page stays usable without browser storage and has no language control", async (t) => {
+test("page stays usable without browser storage and renders the shared Navbar once", async (t) => {
   const page = await pageFor(t);
   await page.addInitScript(() => {
     Object.defineProperty(window, "localStorage", {
@@ -388,8 +388,13 @@ test("page stays usable without browser storage and has no language control", as
   await page.goto(`${baseUrl}/forgot-password`);
   await heading(page, "Quên mật khẩu?");
   assert.equal(
-    await page.getByRole("banner").locator("select, svg").count(),
-    0,
+    await page.getByRole("banner").count(),
+    1,
+  );
+  assert.equal(await page.getByRole("main").locator("header, select").count(), 0);
+  assert.equal(
+    await page.getByRole("banner").getByRole("button", { name: "Chọn ngôn ngữ hiển thị" }).count(),
+    1,
   );
 });
 

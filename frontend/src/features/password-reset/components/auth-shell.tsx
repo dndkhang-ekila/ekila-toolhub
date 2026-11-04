@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { ToolHubHeader } from "@/components/layout/toolhub-header";
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useLocale } from "@/lib/use-locale";
@@ -181,7 +180,6 @@ export function AuthShell({ children }: { children: ReactNode }) {
         {pathname === "/reset-password" ? t.resetPageTitle : t.forgotPageTitle}
       </title>
       <div className={styles.shell} lang={locale}>
-        <ToolHubHeader />
         <main className={styles.main}>
           <div className={styles.authContent}>
             <aside

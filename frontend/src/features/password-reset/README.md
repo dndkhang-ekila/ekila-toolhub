@@ -2,7 +2,7 @@
 
 Giao diện trắng–xanh dương cho `/forgot-password` và `/reset-password?token=...`, hỗ trợ Việt/Anh và màn hình từ 360 px.
 
-Header chỉ còn logo, đã bỏ hẳn bộ chọn ngôn ngữ và biểu tượng quả địa cầu. Nội dung Việt/Anh đọc tùy chọn toolhub_locale đã lưu của ứng dụng; mặc định tiếng Việt nếu không có hoặc storage bị chặn. Trang không tự ghi lựa chọn hoặc lưu email/token/mật khẩu. AuthShell render title theo ngôn ngữ, hai trang không khai báo title tĩnh riêng.
+Dùng Navbar chung tại components/common/Navbar.tsx của FR-COM-05 (commit b4e5342), được render ở layout phía trên form. AuthShell không tạo header/logo hoặc bộ chọn ngôn ngữ riêng. Navbar dùng ThemeProvider và LanguageProvider của nhóm; form đọc chung toolhub_locale và sự kiện toolhub:locale-change. AuthShell giữ tiêu đề theo ngôn ngữ, metadata bảo mật và không lưu email/token/mật khẩu.
 
 ## Phạm vi đã triển khai
 
