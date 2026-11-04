@@ -14,10 +14,12 @@ import { ConfirmModal } from './ConfirmModal';
 import { DeleteAccountModal } from './DeleteAccountModal';
 import { useTheme } from '@/context/ThemeContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { useAuth } from '@/context/AuthContext';
 import { Theme } from '@/types/theme';
 import { Locale } from '@/types/language';
 
 export function AccountSettings() {
+    const { user } = useAuth();
     const { theme, setTheme } = useTheme();
     const { locale, setLocale, t } = useLanguage();
     const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'sessions' | 'preferences' | 'delete'>('profile');
@@ -55,7 +57,7 @@ export function AccountSettings() {
 
     useEffect(() => {
         let isMounted = true;
-        fetchProfile()
+        fetchProfile(user?.id)
             .then((data) => {
                 if (!isMounted) return;
                 setProfile(data);
@@ -74,7 +76,7 @@ export function AccountSettings() {
         return () => {
             isMounted = false;
         };
-    }, []);
+    }, [user?.id]);
 
     const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -127,7 +129,7 @@ export function AccountSettings() {
     const handleLogoutAll = async () => {
         try {
             setLogoutLoading(true);
-            const res = await logoutAllDevices();
+            const res = await logoutAllDevices(user?.id);
             setIsLogoutModalOpen(false);
             showToast('success', res.message || 'Đã đăng xuất khỏi mọi thiết bị thành công!');
         } catch (err: unknown) {
@@ -141,7 +143,7 @@ export function AccountSettings() {
     const handleDeleteAccount = async (password: string) => {
         try {
             setDeleteLoading(true);
-            const res = await deleteAccount({ password });
+            const res = await deleteAccount({ password }, user?.id);
             setProfile((prev) =>
                 prev
                     ? {
@@ -164,7 +166,7 @@ export function AccountSettings() {
     const handleRestoreAccount = async () => {
         try {
             setRestoreLoading(true);
-            const res = await restoreAccount();
+            const res = await restoreAccount(user?.id);
             setProfile((prev) =>
                 prev
                     ? {
