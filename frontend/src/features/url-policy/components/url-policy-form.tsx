@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { useLocale } from "@/lib/use-locale";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import { useLanguage } from "@/context/LanguageContext";
 import { urlPolicyCopy } from "../lib/url-policy.copy";
 import { checkUrlPolicy } from "../lib/check-url-policy";
 import {
@@ -12,7 +12,7 @@ import { PolicyIcon } from "./policy-icon";
 import styles from "../url-policy.module.css";
 
 export function UrlPolicyForm() {
-  const locale = useLocale();
+  const { locale } = useLanguage();
   const t = urlPolicyCopy[locale];
   const [url, setUrl] = useState("");
   const [result, setResult] = useState<ServerUrlPolicyResult | null>(null);
@@ -28,15 +28,9 @@ export function UrlPolicyForm() {
     result?.kind === "blocked-target";
   const invalid = result?.kind === "invalid";
   const allowed = result?.kind === "allowed";
-  useEffect(() => {
-    const previousLanguage = document.documentElement.lang;
-    return () => {
-      document.documentElement.lang = previousLanguage;
-    };
-  }, []);
-  useEffect(() => {
-    document.documentElement.lang = locale;
-  }, [locale]);
+  useLayoutEffect(() => {
+    document.title = t.pageTitle;
+  });
 
   useEffect(
     () => () => {
@@ -124,7 +118,6 @@ export function UrlPolicyForm() {
 
   return (
     <div className={styles.shell} lang={locale}>
-      <title>{t.pageTitle}</title>
       <main className={styles.main}>
         <div className={styles.content}>
           <div className={styles.intro}>

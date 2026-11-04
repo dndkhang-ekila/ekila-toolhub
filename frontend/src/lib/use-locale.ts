@@ -44,3 +44,4 @@ export function useLocale(): Locale {
     () => DEFAULT_LOCALE,
   );
 }
+
