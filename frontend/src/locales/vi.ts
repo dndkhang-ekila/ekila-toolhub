@@ -124,6 +124,7 @@ export const vi = {
     errorTooLong: 'Đường dẫn vượt quá độ dài tối đa 2.048 ký tự',
     errorInvalidProtocol: 'Đường dẫn phải bắt đầu bằng giao thức http:// hoặc https://',
     errorInvalidUrl: 'Đường dẫn URL không hợp lệ. Vui lòng kiểm tra lại tên miền hoặc cấu trúc URL.',
+    errorUnsafeUrl: 'Đường dẫn không an toàn hoặc nằm trong danh sách hạn chế/chặn của ToolHub.',
     resultTitle: 'Liên kết ngắn của bạn đã sẵn sàng!',
     originalUrl: 'Đường dẫn gốc',
     shortUrl: 'Liên kết rút gọn',

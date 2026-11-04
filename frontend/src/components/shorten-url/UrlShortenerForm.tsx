@@ -72,12 +72,19 @@ export function UrlShortenerForm({ onSuccess }: UrlShortenerFormProps) {
           t('urlShortener.errorInvalidProtocol') ||
           'Đường dẫn phải bắt đầu bằng giao thức http:// hoặc https://'
         );
+      case 'errorUnsafeUrl':
+        return (
+          t('urlShortener.errorUnsafeUrl') ||
+          'Đường dẫn vi phạm chính sách an toàn hoặc nằm trong danh sách đen độc hại.'
+        );
       case 'errorInvalidUrl':
-      default:
         return (
           t('urlShortener.errorInvalidUrl') ||
           'Đường dẫn URL không hợp lệ. Vui lòng kiểm tra lại cấu trúc URL.'
         );
+      default:
+        // Trả về trực tiếp lý do từ backend (ví dụ: blacklist reason từ check-safety)
+        return errorKey;
     }
   };
 

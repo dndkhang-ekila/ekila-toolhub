@@ -3,40 +3,44 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { getRecentShortenedLinks } from '@/lib/url-shortener';
+import { resolveShortUrl } from '@/lib/url-shortener';
 
 function ShortUrlRedirectContent() {
   const params = useParams();
   const slug = typeof params?.slug === 'string' ? params.slug : '';
 
   const [targetUrl, setTargetUrl] = useState<string | null>(null);
-  const [checking, setChecking] = useState(true);
+  const [checking, setChecking] = useState(Boolean(slug));
 
   useEffect(() => {
+    let isCancelled = false;
     let redirectTimer: ReturnType<typeof setTimeout> | undefined;
 
-    const timer = setTimeout(() => {
-      if (!slug) {
-        setChecking(false);
-        return;
-      }
+    if (!slug) {
+      return;
+    }
 
-      const links = getRecentShortenedLinks();
-      const match = links.find((item) => item.slug === slug);
-
-      if (match && match.originalUrl) {
-        setTargetUrl(match.originalUrl);
-        // Tự động chuyển hướng đến URL gốc
-        redirectTimer = setTimeout(() => {
-          window.location.replace(match.originalUrl);
-        }, 800);
-      } else {
-        setChecking(false);
-      }
-    }, 0);
+    resolveShortUrl(slug)
+      .then((resolvedUrl) => {
+        if (isCancelled) return;
+        if (resolvedUrl) {
+          setTargetUrl(resolvedUrl);
+          // Tự động chuyển hướng đến URL gốc
+          redirectTimer = setTimeout(() => {
+            window.location.replace(resolvedUrl);
+          }, 800);
+        } else {
+          setChecking(false);
+        }
+      })
+      .catch(() => {
+        if (!isCancelled) {
+          setChecking(false);
+        }
+      });
 
     return () => {
-      clearTimeout(timer);
+      isCancelled = true;
       if (redirectTimer) clearTimeout(redirectTimer);
     };
   }, [slug]);
@@ -73,7 +77,7 @@ function ShortUrlRedirectContent() {
         Không tìm thấy liên kết rút gọn
       </h1>
       <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400 max-w-md mx-auto">
-        Mã slug <code className="px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 font-mono font-bold">{slug}</code> không tồn tại trên thiết bị này hoặc đã hết hạn.
+        Mã slug <code className="px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 font-mono font-bold">{slug}</code> không tồn tại hoặc đã hết hạn.
       </p>
 
       <div className="mt-6 flex items-center gap-3">

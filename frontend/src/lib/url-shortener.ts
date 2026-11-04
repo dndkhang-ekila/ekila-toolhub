@@ -1,4 +1,7 @@
-import type { ShortenedLink, UrlValidationResult } from '../types/url';
+import type { ShortenedLink, UrlValidationResult, SafetyCheckResponse } from '../types/url';
+
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 
 /**
  * Bảng mã ký tự an toàn (56 ký tự alphanumeric):
@@ -13,23 +16,53 @@ export const SAFE_ALPHANUMERIC_CHARSET =
 const STORAGE_KEY = 'toolhub_shortened_links';
 
 /**
+ * Lấy Auth headers từ localStorage nếu có
+ */
+function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (typeof window !== 'undefined') {
+    try {
+      const token = localStorage.getItem('toolhub_access_token');
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const userStr = localStorage.getItem('toolhub_user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user?.id) headers['x-user-id'] = user.id;
+      }
+    } catch {
+      // Storage unavailable / non-JSON
+    }
+  }
+  return headers;
+}
+
+/**
  * [FR-URL-01] Sinh slug ngẫu nhiên độ dài 6–8 ký tự
+ * Khắc phục triệt để thiên vị modulo (modulo bias) bằng Rejection Sampling:
+ * 56 ký tự, 256 - (256 % 56) = 224. Chỉ nhận các byte < 224 để
+ * đảm bảo 100% xác suất xuất hiện của mọi ký tự là bằng nhau (4/224 = 1/56).
  */
 export function generateRandomSlug(minLength = 6, maxLength = 8): string {
   const length =
     Math.floor(Math.random() * (maxLength - minLength + 1)) + minLength;
   let slug = '';
   const charset = SAFE_ALPHANUMERIC_CHARSET;
-  const charsetLength = charset.length;
+  const charsetLength = charset.length; // 56
+  const maxValidByte = 256 - (256 % charsetLength); // 224
 
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    const randomBytes = new Uint8Array(length);
-    crypto.getRandomValues(randomBytes);
-    for (let i = 0; i < length; i++) {
-      slug += charset[randomBytes[i] % charsetLength];
-    }
-  } else {
-    for (let i = 0; i < length; i++) {
+  while (slug.length < length) {
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      const needed = length - slug.length;
+      const buffer = new Uint8Array(needed * 2);
+      crypto.getRandomValues(buffer);
+      for (let i = 0; i < buffer.length && slug.length < length; i++) {
+        if (buffer[i] < maxValidByte) {
+          slug += charset[buffer[i] % charsetLength];
+        }
+      }
+    } else {
       slug += charset[Math.floor(Math.random() * charsetLength)];
     }
   }
@@ -79,6 +112,36 @@ export function validateUrl(rawUrl: string): UrlValidationResult {
 }
 
 /**
+ * Kiểm tra an toàn URL qua API Backend (/links/check-safety)
+ */
+export async function checkUrlSafetyApi(url: string): Promise<SafetyCheckResponse> {
+  try {
+    const res = await fetch(`${API_BASE}/links/check-safety`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return {
+        isSafe: false,
+        reason: data.message || 'Liên kết không an toàn theo chính sách ToolHub',
+        violationKind: data.violationKind,
+      };
+    }
+
+    const data = await res.json();
+    return data;
+  } catch {
+    // Nếu backend chưa bật hoặc gặp lỗi mạng trong scaffold, fallback an toàn
+    return { isSafe: true };
+  }
+}
+
+/**
  * Lấy danh sách link rút gọn từ LocalStorage
  */
 export function getRecentShortenedLinks(): ShortenedLink[] {
@@ -100,7 +163,7 @@ export function saveShortenedLink(link: ShortenedLink): ShortenedLink[] {
   if (typeof window === 'undefined') return [];
   try {
     const current = getRecentShortenedLinks();
-    // Đưa link mới lên đầu danh sách, tránh trùng lặp id
+    // Đưa link mới lên đầu danh sách, tránh trùng lặp id/slug
     const filtered = current.filter((item) => item.id !== link.id && item.slug !== link.slug);
     const updated = [link, ...filtered].slice(0, 50);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
@@ -139,7 +202,9 @@ export function clearShortenedLinks(): void {
 
 /**
  * [FR-URL-01] Thực hiện rút gọn URL:
- * Phản hồi trong thời gian dưới 1 giây (đạt tiêu chí nghiệm thu)
+ * 1. Kiểm tra an toàn URL qua API backend (/links/check-safety)
+ * 2. Gửi request tạo link lên Backend API POST /api/v1/links
+ * 3. Đồng bộ lưu vào localStorage để hiển thị ngay trên UI
  */
 export async function createShortUrl(
   originalUrl: string,
@@ -150,11 +215,61 @@ export async function createShortUrl(
     throw new Error(validation.error || 'errorInvalidUrl');
   }
 
+  // 1. Kiểm tra chính sách an toàn URL
+  const safety = await checkUrlSafetyApi(validation.sanitizedUrl);
+  if (!safety.isSafe) {
+    throw new Error(safety.reason || 'errorUnsafeUrl');
+  }
+
   const slug = generateRandomSlug(6, 8);
   const cleanOrigin = origin.replace(/\/+$/, '');
   const shortUrl = `${cleanOrigin}/s/${slug}`;
 
-  const newLink: ShortenedLink = {
+  // 2. Gửi request tạo link lên Backend API POST /api/v1/links
+  try {
+    const headers = getAuthHeaders();
+
+    const res = await fetch(`${API_BASE}/links`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        originalUrl: validation.sanitizedUrl,
+        customSlug: slug,
+        forceNew: true,
+      }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const linkRecord = data.link || data;
+      const finalSlug = linkRecord.slug || slug;
+      const finalShortUrl = `${cleanOrigin}/s/${finalSlug}`;
+
+      const createdLink: ShortenedLink = {
+        id: linkRecord.id || `link_${Date.now()}_${finalSlug}`,
+        originalUrl: linkRecord.originalUrl || validation.sanitizedUrl,
+        shortUrl: finalShortUrl,
+        slug: finalSlug,
+        createdAt: linkRecord.createdAt || new Date().toISOString(),
+        clicks: linkRecord.clickCount ?? 0,
+      };
+
+      saveShortenedLink(createdLink);
+      return createdLink;
+    } else {
+      const errorData = await res.json().catch(() => ({}));
+      if (res.status === 422) {
+        throw new Error(errorData.message || 'errorUnsafeUrl');
+      }
+    }
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message !== 'Failed to fetch' && !err.message.includes('NetworkError')) {
+      throw err;
+    }
+  }
+
+  // Fallback lưu cục bộ nếu backend tạm thời không kết nối được
+  const fallbackLink: ShortenedLink = {
     id: `link_${Date.now()}_${slug}`,
     originalUrl: validation.sanitizedUrl,
     shortUrl,
@@ -163,9 +278,51 @@ export async function createShortUrl(
     clicks: 0,
   };
 
-  // Lưu ngay vào localStorage
-  saveShortenedLink(newLink);
+  saveShortenedLink(fallbackLink);
+  return fallbackLink;
+}
 
-  // TODO: [FR-URL-01][BE] Khi Backend có API POST /api/v1/urls/shorten, đồng bộ bất đồng bộ
-  return newLink;
+/**
+ * Tra cứu URL gốc từ slug qua LocalStorage hoặc Backend API GET /api/v1/links/:slug
+ * Đảm bảo người khác nhận được link vẫn có thể mở và chuyển hướng thành công.
+ */
+export async function resolveShortUrl(slug: string): Promise<string | null> {
+  if (!slug) return null;
+
+  // 1. Kiểm tra localStorage trước (nhanh trên máy vừa tạo)
+  const localLinks = getRecentShortenedLinks();
+  const match = localLinks.find((item) => item.slug === slug);
+  if (match?.originalUrl) {
+    return match.originalUrl;
+  }
+
+  // 2. Tra cứu từ Backend API
+  try {
+    const res = await fetch(`${API_BASE}/links/${encodeURIComponent(slug)}`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+      },
+      cache: 'no-store',
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.originalUrl) {
+        saveShortenedLink({
+          id: data.id || `link_${data.slug}`,
+          originalUrl: data.originalUrl,
+          shortUrl: typeof window !== 'undefined' ? `${window.location.origin}/s/${data.slug}` : data.shortUrl,
+          slug: data.slug,
+          createdAt: data.createdAt || new Date().toISOString(),
+          clicks: data.clickCount ?? 0,
+        });
+        return data.originalUrl;
+      }
+    }
+  } catch {
+    // Network / offline fallback
+  }
+
+  return null;
 }

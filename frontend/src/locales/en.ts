@@ -126,6 +126,7 @@ export const en: Translations = {
     errorTooLong: 'URL exceeds the maximum length of 2,048 characters',
     errorInvalidProtocol: 'URL must begin with http:// or https://',
     errorInvalidUrl: 'Invalid URL format. Please verify domain name and URL structure.',
+    errorUnsafeUrl: 'URL is unsafe or belongs to a restricted/blocked domain.',
     resultTitle: 'Your short link is ready!',
     originalUrl: 'Original URL',
     shortUrl: 'Shortened Link',

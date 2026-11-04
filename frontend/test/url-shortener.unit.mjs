@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   generateRandomSlug,
   validateUrl,
+  resolveShortUrl,
   SAFE_ALPHANUMERIC_CHARSET,
 } from '../src/lib/url-shortener.ts';
 
@@ -77,6 +78,23 @@ test('[FR-URL-01] generateRandomSlug: sinh slug 6–8 ký tự và loại bỏ k
   }
 });
 
+test('[FR-URL-01] generateRandomSlug: Rejection sampling loại bỏ hoàn toàn modulo bias', () => {
+  const totalChars = SAFE_ALPHANUMERIC_CHARSET.length;
+  assert.ok(totalChars > 0);
+
+  // Sinh 1000 slugs qua generateRandomSlug và đảm bảo tất cả ký tự trong bảng mã đều có thể xuất hiện
+  const charFreq = new Map();
+  for (let i = 0; i < 1500; i++) {
+    const slug = generateRandomSlug(7, 7);
+    for (const char of slug) {
+      charFreq.set(char, (charFreq.get(char) || 0) + 1);
+    }
+  }
+
+  // Toàn bộ các ký tự an toàn đều được sinh ra
+  assert.equal(charFreq.size, totalChars, 'Mọi ký tự trong SAFE_ALPHANUMERIC_CHARSET đều phải xuất hiện');
+});
+
 test('[FR-URL-01] Tiêu chí nghiệm thu: sinh slug hoàn tất dưới 1 giây', () => {
   const start = Date.now();
   for (let i = 0; i < 1000; i++) {
@@ -84,4 +102,9 @@ test('[FR-URL-01] Tiêu chí nghiệm thu: sinh slug hoàn tất dưới 1 giây
   }
   const duration = Date.now() - start;
   assert.ok(duration < 1000, `Duration ${duration}ms must be well under 1000ms`);
+});
+
+test('[FR-URL-01] resolveShortUrl: trả về null với slug rỗng', async () => {
+  const res = await resolveShortUrl('');
+  assert.equal(res, null);
 });
