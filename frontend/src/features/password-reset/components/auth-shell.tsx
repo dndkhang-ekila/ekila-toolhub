@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { createContext, useContext, useLayoutEffect, type ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useLanguage } from "@/context/LanguageContext";
+import { usePageTitle } from "@/lib/use-page-title";
 import { AuthIcon } from "./auth-icons";
 import styles from "../password-reset.module.css";
 
@@ -230,10 +231,9 @@ export function AuthCard({
 }) {
   const { t } = useAuthCopy();
   const pathname = usePathname();
-  useLayoutEffect(() => {
-    document.title =
-      pathname === "/reset-password" ? t.resetPageTitle : t.forgotPageTitle;
-  });
+  usePageTitle(
+    pathname === "/reset-password" ? t.resetPageTitle : t.forgotPageTitle,
+  );
   return (
     <section className={styles.card} aria-labelledby="auth-title">
       <div className={styles.iconBadge}>
