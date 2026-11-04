@@ -1,3 +1,4 @@
+import { UrlPolicyModule } from './url-policy/url-policy.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
@@ -10,6 +11,7 @@ import { LinksModule } from './links/links.module';
 
 @Module({
   imports: [
+    UrlPolicyModule,
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
