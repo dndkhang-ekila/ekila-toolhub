@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ToolHubHeader } from "@/components/layout/toolhub-header";
 import { useLocale } from "@/lib/use-locale";
 import { urlPolicyCopy } from "../lib/url-policy.copy";
 import { checkUrlPolicy } from "../lib/check-url-policy";
@@ -126,7 +125,6 @@ export function UrlPolicyForm() {
   return (
     <div className={styles.shell} lang={locale}>
       <title>{t.pageTitle}</title>
-      <ToolHubHeader />
       <main className={styles.main}>
         <div className={styles.content}>
           <div className={styles.intro}>

@@ -2,7 +2,7 @@
 
 Giao diện riêng tại /url-check gọi POST /api/v1/url-policy/check của KAN-110. Không tạo QR, link ngắn, database hoặc thay đổi entity.
 
-Header dùng chung ToolHubHeader với trang quên mật khẩu, chỉ còn logo bên trái; đã bỏ hoàn toàn dropdown ngôn ngữ và biểu tượng quả địa cầu. Nội dung vẫn đọc tùy chọn toolhub_locale của ứng dụng, mặc định tiếng Việt. Desktop vừa màn hình và mobile không tràn ngang.
+Dùng Navbar chung tại components/common/Navbar.tsx của FR-COM-05 (commit b4e5342), được render ở layout; form không còn header/logo riêng. Navbar và nội dung dùng chung toolhub_locale qua sự kiện toolhub:locale-change. Khoảng cao nội dung đã trừ header 65px để desktop vừa màn hình và mobile không tràn ngang.
 
 ## Luồng thực tế
 

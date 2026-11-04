@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/context/AuthContext";
+import { ThemeProvider, antiFoucScript } from "@/context/ThemeContext";
+import { LanguageProvider } from "@/context/LanguageContext";
+import { Navbar } from "@/components/common/Navbar";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -25,8 +29,20 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: antiFoucScript }} />
+      </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
-        <AuthProvider>{children}</AuthProvider>
+        <ThemeProvider>
+          <LanguageProvider>
+            <AuthProvider>
+              <Suspense fallback={<div className="h-16" />}>
+                <Navbar />
+              </Suspense>
+              {children}
+            </AuthProvider>
+          </LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
