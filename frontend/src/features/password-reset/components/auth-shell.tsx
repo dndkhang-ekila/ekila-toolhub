@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
+import { useLocale } from "@/lib/use-locale";
 import { AuthIcon } from "./auth-icons";
 import styles from "../password-reset.module.css";
 
@@ -158,38 +159,12 @@ export function useAuthCopy() {
 export const loginUrl = process.env.NEXT_PUBLIC_LOGIN_URL || "/login";
 
 export function AuthShell({ children }: { children: ReactNode }) {
-  const [locale, setLocale] = useState<Locale>("vi");
+  const locale = useLocale();
   const t = messages[locale];
   return (
     <AuthContext.Provider value={{ t, locale }}>
       <div className={styles.shell} lang={locale}>
-        <header className={styles.header}>
-          <Link href="/" className={styles.brand} aria-label="ToolHub">
-            Tool<span>Hub</span>
-            <span className={styles.brandDot} />
-          </Link>
-          <label className={styles.language}>
-            <span className={styles.srOnly}>{t.language}</span>
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              aria-hidden="true"
-            >
-              <circle cx="12" cy="12" r="9" />
-              <path d="M3 12h18M12 3a18 18 0 0 1 0 18 18 18 0 0 1 0-18Z" />
-            </svg>
-            <select
-              aria-label={t.language}
-              value={locale}
-              onChange={(event) => setLocale(event.target.value as Locale)}
-            >
-              <option value="vi">Tiếng Việt</option>
-              <option value="en">English</option>
-            </select>
-          </label>
-        </header>
+        
         <main className={styles.main}>
           <div className={styles.authContent}>
             <aside
