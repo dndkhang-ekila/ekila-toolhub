@@ -3,8 +3,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { Locale, LanguageContextType } from '@/types/language';
 import { availableLocales, DEFAULT_LOCALE, translate } from '@/locales';
-
-const LOCALE_STORAGE_KEY = 'toolhub_locale';
+import { LOCALE_STORAGE_KEY, LOCALE_CHANGED_EVENT, getLocale } from '@/lib/use-locale';
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
@@ -12,28 +11,39 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
   const [mounted, setMounted] = useState(false);
 
-  // Khởi tạo ngôn ngữ từ localStorage hoặc trình duyệt sau khi mount
+  // Khởi tạo ngôn ngữ từ localStorage (mặc định 'vi' theo tiêu chuẩn)
   useEffect(() => {
     const timer = setTimeout(() => {
-      try {
-        const stored = localStorage.getItem(LOCALE_STORAGE_KEY) as Locale | null;
-        if (stored === 'vi' || stored === 'en') {
-          setLocaleState(stored);
-          document.documentElement.lang = stored;
-        } else {
-          // Kiểm tra navigator.language của người dùng
-          const browserLang = navigator.language.toLowerCase();
-          const detected: Locale = browserLang.startsWith('vi') ? 'vi' : 'en';
-          setLocaleState(detected);
-          document.documentElement.lang = detected;
-        }
-      } catch {
-        setLocaleState(DEFAULT_LOCALE);
+      const initialLocale = getLocale();
+      setLocaleState(initialLocale);
+      if (typeof document !== 'undefined') {
+        document.documentElement.lang = initialLocale;
       }
       setMounted(true);
     }, 0);
 
-    return () => clearTimeout(timer);
+    const handleExternalChange = () => {
+      const current = getLocale();
+      setLocaleState(current);
+      if (typeof document !== 'undefined') {
+        document.documentElement.lang = current;
+      }
+    };
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === LOCALE_STORAGE_KEY || event.key === null) {
+        handleExternalChange();
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener(LOCALE_CHANGED_EVENT, handleExternalChange);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener(LOCALE_CHANGED_EVENT, handleExternalChange);
+    };
   }, []);
 
   const setLocale = useCallback((newLocale: Locale) => {
@@ -49,8 +59,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       // Ignore
     }
 
-    // TODO: [FR-COM-05] Synchronize locale preference with backend API PATCH /api/v1/account/profile when user is authenticated
-    // e.g., if (userToken) updateProfile({ locale: newLocale }).catch(...)
+    // Bắn event 'toolhub:locale-change' để đồng bộ toàn bộ app
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event(LOCALE_CHANGED_EVENT));
+      window.dispatchEvent(new CustomEvent(LOCALE_CHANGED_EVENT, { detail: newLocale }));
+    }
   }, []);
 
   const t = useCallback(

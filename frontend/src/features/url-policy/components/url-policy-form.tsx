@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { checkUrlPolicy } from "../lib/check-url-policy";
 import {
@@ -104,13 +103,6 @@ export function UrlPolicyForm() {
     <main className={styles.shell}>
       <div className={styles.content}>
         <header className={styles.intro}>
-          <Link
-            href="/"
-            className={styles.brand}
-            aria-label="ToolHub — Trang chủ"
-          >
-            Tool<span>Hub.</span>
-          </Link>
           <p className={styles.eyebrow}>KIỂM TRA LIÊN KẾT</p>
           <h1>Kiểm tra trước khi rút gọn</h1>
           <p className={styles.subtitle}>
