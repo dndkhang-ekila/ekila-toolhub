@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLanguage } from "@/context/LanguageContext";
+import { usePageTitle } from "@/lib/use-page-title";
 import { urlPolicyCopy } from "../lib/url-policy.copy";
 import { checkUrlPolicy } from "../lib/check-url-policy";
 import {
@@ -28,9 +29,7 @@ export function UrlPolicyForm() {
     result?.kind === "blocked-target";
   const invalid = result?.kind === "invalid";
   const allowed = result?.kind === "allowed";
-  useLayoutEffect(() => {
-    document.title = t.pageTitle;
-  });
+  usePageTitle(t.pageTitle);
 
   useEffect(
     () => () => {
