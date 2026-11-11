@@ -42,7 +42,8 @@ export interface CreateLinkResult {
   message?: string;
 }
 
-export type ResolveLinkStatus = 'SUCCESS' | 'NOT_FOUND' | 'DISABLED' | 'EXPIRED';
+export type ResolveLinkStatus =
+  'SUCCESS' | 'NOT_FOUND' | 'DISABLED' | 'EXPIRED';
 
 export interface ResolveLinkResult {
   status: ResolveLinkStatus;

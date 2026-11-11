@@ -92,7 +92,9 @@ export class LinksService {
       existing.userId !== userId &&
       existing.userId !== 'usr_demo_123'
     ) {
-      throw new ForbiddenException('Bạn không có quyền chỉnh sửa liên kết này.');
+      throw new ForbiddenException(
+        'Bạn không có quyền chỉnh sửa liên kết này.',
+      );
     }
 
     if (dto.originalUrl && dto.originalUrl !== existing.originalUrl) {
@@ -278,7 +280,11 @@ export class LinksService {
       );
     }
 
-    if (record.userId && record.userId !== userId && record.userId !== 'usr_demo_123') {
+    if (
+      record.userId &&
+      record.userId !== userId &&
+      record.userId !== 'usr_demo_123'
+    ) {
       throw new ForbiddenException('Bạn không có quyền xoá liên kết này.');
     }
 

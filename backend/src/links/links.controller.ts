@@ -75,7 +75,10 @@ export class LinksController {
       'FRONTEND_URL',
       'http://localhost:3000',
     );
-    const ip = parseClientIp(req.headers['x-forwarded-for'], req.socket?.remoteAddress);
+    const ip = parseClientIp(
+      req.headers['x-forwarded-for'],
+      req.socket?.remoteAddress,
+    );
     const userAgent = (req.headers['user-agent'] as string) || '';
     const referer = (req.headers['referer'] as string) || '';
 
@@ -104,7 +107,10 @@ export class LinksController {
     @Param('slug') slug: string,
     @Req() req: Request,
   ): Promise<ResolveLinkResult> {
-    const ip = parseClientIp(req.headers['x-forwarded-for'], req.socket?.remoteAddress);
+    const ip = parseClientIp(
+      req.headers['x-forwarded-for'],
+      req.socket?.remoteAddress,
+    );
     const userAgent = (req.headers['user-agent'] as string) || '';
     const referer = (req.headers['referer'] as string) || '';
 

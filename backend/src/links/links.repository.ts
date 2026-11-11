@@ -27,7 +27,8 @@ export class LinksRepository {
       {
         id: 'lnk_2',
         slug: 'fb-promo-2026',
-        originalUrl: 'https://toolhub.ekila.vn/campaign/summer-promo?utm_source=facebook&utm_medium=cpc',
+        originalUrl:
+          'https://toolhub.ekila.vn/campaign/summer-promo?utm_source=facebook&utm_medium=cpc',
         shortUrl: 'https://toolhub.id.vn/fb-promo-2026',
         userId: 'usr_demo_123',
         isGuest: false,
@@ -111,7 +112,8 @@ export class LinksRepository {
     const result: LinkRecord[] = [];
 
     for (const record of this.storeById.values()) {
-      const isOwner = record.userId === userId || record.userId === 'usr_demo_123';
+      const isOwner =
+        record.userId === userId || record.userId === 'usr_demo_123';
       if (!isOwner) continue;
 
       if (keyword) {
@@ -126,7 +128,10 @@ export class LinksRepository {
       });
     }
 
-    result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    result.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
     return Promise.resolve(result);
   }
 
@@ -149,7 +154,10 @@ export class LinksRepository {
     return Promise.resolve(null);
   }
 
-  update(id: string, updates: Partial<Pick<LinkRecord, 'originalUrl' | 'isActive'>>): Promise<LinkRecord | null> {
+  update(
+    id: string,
+    updates: Partial<Pick<LinkRecord, 'originalUrl' | 'isActive'>>,
+  ): Promise<LinkRecord | null> {
     const existing = this.storeById.get(id);
     if (!existing) {
       return Promise.resolve(null);
@@ -186,7 +194,12 @@ export class LinksRepository {
       return Promise.resolve(false);
     }
 
-    if (userId && record.userId && record.userId !== userId && record.userId !== 'usr_demo_123') {
+    if (
+      userId &&
+      record.userId &&
+      record.userId !== userId &&
+      record.userId !== 'usr_demo_123'
+    ) {
       return Promise.resolve(false);
     }
 
@@ -201,7 +214,12 @@ export class LinksRepository {
       return Promise.resolve(false);
     }
 
-    if (userId && record.userId && record.userId !== userId && record.userId !== 'usr_demo_123') {
+    if (
+      userId &&
+      record.userId &&
+      record.userId !== userId &&
+      record.userId !== 'usr_demo_123'
+    ) {
       return Promise.resolve(false);
     }
 

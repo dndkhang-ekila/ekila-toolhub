@@ -3,10 +3,14 @@ import { AccountService } from './account.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdatePreferencesDto } from './dto/update-preferences.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { EventsGateway } from './events.gateway';
 
 @Controller('account')
 export class AccountController {
-  constructor(private readonly accountService: AccountService) {}
+  constructor(
+    private readonly accountService: AccountService,
+    private readonly eventsGateway: EventsGateway,
+  ) {}
 
   @Get('profile')
   getProfile(@Headers('x-user-id') userIdHeader?: string) {
@@ -48,8 +52,13 @@ export class AccountController {
   }
 
   @Post('logout-all')
-  logoutAll(@Headers('x-user-id') userIdHeader?: string) {
+  async logoutAll(
+    @Headers('x-user-id') userIdHeader?: string,
+    @Headers('x-socket-id') socketIdHeader?: string,
+  ) {
     const userId = userIdHeader || 'usr_demo_123';
-    return this.accountService.logoutAllDevices(userId);
+    const result = await this.accountService.logoutAllDevices(userId);
+    this.eventsGateway.notifyLogoutOtherDevices(userId, socketIdHeader);
+    return result;
   }
 }

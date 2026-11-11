@@ -59,17 +59,25 @@ export async function changePassword(
     return handleResponse<{ success: boolean; message: string }>(res);
 }
 
+import { getCurrentSocketId } from './socket';
+
 export async function logoutAllDevices(): Promise<{
     success: boolean;
     message: string;
     tokenVersion: number;
 }> {
+    const socketId = getCurrentSocketId();
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'x-user-id': 'usr_demo_123',
+    };
+    if (socketId) {
+        headers['x-socket-id'] = socketId;
+    }
+
     const res = await fetch(`${API_BASE}/account/logout-all`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-user-id': 'usr_demo_123',
-        },
+        headers,
     });
     return handleResponse<{
         success: boolean;

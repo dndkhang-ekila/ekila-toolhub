@@ -1,6 +1,9 @@
 import * as crypto from 'crypto';
 
-export function parseClientIp(rawHeader?: string | string[], fallback = '127.0.0.1'): string {
+export function parseClientIp(
+  rawHeader?: string | string[],
+  fallback = '127.0.0.1',
+): string {
   if (!rawHeader) return fallback;
   const ipStr = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
   const first = ipStr.split(',')[0].trim();
@@ -16,7 +19,9 @@ export function detectDeviceAndBrowser(userAgent: string): {
   let device: 'mobile' | 'desktop' | 'tablet' | 'other' = 'desktop';
   if (/tablet|ipad|playbook|silk/i.test(ua)) {
     device = 'tablet';
-  } else if (/mobile|iphone|ipod|android|blackberry|iemobile|kindle/i.test(ua)) {
+  } else if (
+    /mobile|iphone|ipod|android|blackberry|iemobile|kindle/i.test(ua)
+  ) {
     device = 'mobile';
   }
 
