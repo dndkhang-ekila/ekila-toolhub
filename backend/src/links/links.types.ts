@@ -41,3 +41,42 @@ export interface CreateLinkResult {
   isDuplicate?: boolean;
   message?: string;
 }
+
+export type AbuseReportReason =
+  'PHISHING' | 'MALWARE' | 'SPAM' | 'ADULT' | 'COPYRIGHT' | 'OTHER';
+
+export type AbuseReportStatus = 'PENDING' | 'RESOLVED' | 'DISMISSED';
+
+export type ReportActionTaken = 'DISABLED' | 'DELETED' | 'NONE';
+
+export interface AbuseReportRecord {
+  id: string;
+  slug: string;
+  targetUrl: string;
+  reason: AbuseReportReason;
+  details?: string;
+  reporterEmail?: string;
+  reporterIpHash: string;
+  status: AbuseReportStatus;
+  actionTaken?: ReportActionTaken;
+  adminNotes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  resolvedAt?: Date;
+  resolvedBy?: string;
+}
+
+export interface AdminReportsFilter {
+  status?: AbuseReportStatus | 'ALL';
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface AdminReportsQueryResult {
+  reports: AbuseReportRecord[];
+  total: number;
+  pendingCount: number;
+  resolvedCount: number;
+  dismissedCount: number;
+}

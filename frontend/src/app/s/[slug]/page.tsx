@@ -4,6 +4,7 @@ import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { resolveShortUrl } from '@/lib/url-shortener';
+import { ReportAbuseModal } from '@/components/links/ReportAbuseModal';
 
 function ShortUrlRedirectContent() {
   const params = useParams();
@@ -11,6 +12,7 @@ function ShortUrlRedirectContent() {
 
   const [targetUrl, setTargetUrl] = useState<string | null>(null);
   const [checking, setChecking] = useState(Boolean(slug));
+  const [showReportModal, setShowReportModal] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
@@ -55,6 +57,28 @@ function ShortUrlRedirectContent() {
         <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400 font-mono max-w-md truncate">
           {targetUrl}
         </p>
+
+        <div className="mt-6 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+          <button
+            type="button"
+            onClick={() => setShowReportModal(true)}
+            className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 transition"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            Báo cáo link vi phạm
+          </button>
+        </div>
+
+        {slug && (
+          <ReportAbuseModal
+            slug={slug}
+            targetUrl={targetUrl}
+            isOpen={showReportModal}
+            onClose={() => setShowReportModal(false)}
+          />
+        )}
       </main>
     );
   }
@@ -80,7 +104,7 @@ function ShortUrlRedirectContent() {
         Mã slug <code className="px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-indigo-600 dark:text-indigo-400 font-mono font-bold">{slug}</code> không tồn tại hoặc đã hết hạn.
       </p>
 
-      <div className="mt-6 flex items-center gap-3">
+      <div className="mt-6 flex items-center justify-center gap-3">
         <Link
           href="/shorten-url"
           className="px-5 py-2.5 rounded-xl font-semibold text-sm text-white bg-indigo-600 hover:bg-indigo-700 transition shadow-sm"
@@ -94,6 +118,28 @@ function ShortUrlRedirectContent() {
           Trang chủ
         </Link>
       </div>
+
+      <div className="mt-4">
+        <button
+          type="button"
+          onClick={() => setShowReportModal(true)}
+          className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 transition"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          Báo cáo link này nếu có vi phạm
+        </button>
+      </div>
+
+      {slug && (
+        <ReportAbuseModal
+          slug={slug}
+          targetUrl={targetUrl || undefined}
+          isOpen={showReportModal}
+          onClose={() => setShowReportModal(false)}
+        />
+      )}
     </main>
   );
 }

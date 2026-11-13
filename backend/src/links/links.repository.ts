@@ -60,6 +60,21 @@ export class LinksRepository {
     return Promise.resolve(true);
   }
 
+  update(
+    id: string,
+    updates: Partial<Pick<LinkRecord, 'isActive'>>,
+  ): Promise<LinkRecord | null> {
+    const record = this.storeById.get(id);
+    if (!record) return Promise.resolve(null);
+    if (updates.isActive !== undefined) {
+      record.isActive = updates.isActive;
+    }
+    return Promise.resolve({
+      ...record,
+      uniqueDailyHashes: [...record.uniqueDailyHashes],
+    });
+  }
+
   delete(slug: string, userId?: string): Promise<boolean> {
     const record = this.storeBySlug.get(slug);
     if (!record) {
