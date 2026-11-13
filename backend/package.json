@@ -16,7 +16,10 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage --passWithNoTests",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json --passWithNoTests"
+    "test:e2e": "jest --config ./test/jest-e2e.json --passWithNoTests",
+    "db:init": "node scripts/password-reset-db.cjs init",
+    "db:seed:local": "node scripts/password-reset-db.cjs seed",
+    "mail:local": "node scripts/password-reset-mailbox.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -24,7 +27,7 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/jwt": "^11.0.0",
     "@nestjs/platform-express": "^11.0.1",
-    "@nestjs/typeorm": "^11.0.0",
+    "@nestjs/typeorm": "^11.0.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/better-sqlite3": "^9.6.0",
     "bcryptjs": "^3.0.3",
