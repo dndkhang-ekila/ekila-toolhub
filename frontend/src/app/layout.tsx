@@ -43,7 +43,7 @@ export default function RootLayout({
       </head>
       <body
         suppressHydrationWarning
-        className="min-h-full flex flex-col bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 transition-colors"
+        className="min-h-full flex flex-col bg-background text-foreground transition-colors"
       >
         <ThemeProvider>
           <LanguageProvider>
