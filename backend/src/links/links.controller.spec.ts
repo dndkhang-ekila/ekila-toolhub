@@ -1,4 +1,5 @@
 import { HttpStatus } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Response } from 'express';
 import { LinksController } from './links.controller';
@@ -27,6 +28,15 @@ describe('LinksController', () => {
           provide: UrlSafetyService,
           useValue: {
             checkUrlSafety: jest.fn(),
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string, fallback?: string) => {
+              if (key === 'FRONTEND_URL') return 'http://localhost:3000';
+              return fallback || null;
+            }),
           },
         },
       ],

@@ -41,3 +41,11 @@ export interface CreateLinkResult {
   isDuplicate?: boolean;
   message?: string;
 }
+
+export type ResolveLinkStatus =
+  'SUCCESS' | 'NOT_FOUND' | 'DISABLED' | 'EXPIRED';
+
+export interface ResolveLinkResult {
+  status: ResolveLinkStatus;
+  originalUrl?: string;
+}
