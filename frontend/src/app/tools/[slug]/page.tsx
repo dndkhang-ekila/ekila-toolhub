@@ -3,8 +3,6 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getAllTools, getToolBySlug, getToolsByCategory } from '@/lib/tools-registry';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
 import { ToolHost } from '@/components/tools/ToolHost';
 import {
   SparklesIcon,
@@ -134,8 +132,6 @@ export default async function ToolPage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-
-      <Header />
 
       <main className="flex-1 py-8 sm:py-12">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
@@ -280,8 +276,6 @@ export default async function ToolPage({ params }: PageProps) {
           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

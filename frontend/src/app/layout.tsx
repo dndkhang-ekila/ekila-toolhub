@@ -1,7 +1,12 @@
+import React, { Suspense } from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { AuthProvider } from "@/context/AuthContext";
 import "./globals.css";
+import { ThemeProvider, antiFoucScript } from "@/context/ThemeContext";
+import { LanguageProvider } from "@/context/LanguageContext";
+import { AuthProvider } from "@/context/AuthContext";
+import { Navbar } from "@/components/common/Navbar";
+import { Footer } from "@/components/common/Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,22 +23,39 @@ export const metadata: Metadata = {
   description: "Nền tảng tiện ích QRCode và công cụ tệp đa năng",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="vi"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');var d=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}catch(e){}})();`,
+            __html: antiFoucScript,
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-background text-foreground" suppressHydrationWarning>
-        <AuthProvider>{children}</AuthProvider>
+      <body
+        suppressHydrationWarning
+        className="min-h-full flex flex-col bg-background text-foreground transition-colors"
+      >
+        <ThemeProvider>
+          <LanguageProvider>
+            <AuthProvider>
+              <Suspense fallback={<div className="h-16" />}>
+                <Navbar />
+              </Suspense>
+              <div className="flex-1 flex flex-col">{children}</div>
+              <Footer />
+            </AuthProvider>
+          </LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

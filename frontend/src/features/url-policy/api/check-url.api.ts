@@ -6,6 +6,7 @@ export type ServerUrlPolicyResult =
       kind:
         "blocked-redirect" | "blocked-target" | "unverified" | "rate-limited";
       message: string;
+      retryAfter?: number;
     };
 
 const unavailable: ServerUrlPolicyResult = {
@@ -40,6 +41,7 @@ export async function checkUrlOnServer(
         raw && /^\d+$/.test(raw) ? Math.min(Number(raw), 3600) : 60;
       return {
         kind: "rate-limited",
+        retryAfter: seconds,
         message: `Bạn đã kiểm tra quá nhiều lần. Vui lòng thử lại sau ${seconds} giây.`,
       };
     }
