@@ -2,6 +2,8 @@
 
 Giao diện riêng tại /url-check gọi POST /api/v1/url-policy/check của KAN-110. Không tạo QR, link ngắn, database hoặc thay đổi entity.
 
+Dùng đúng root layout và Navbar/Footer của PR #15 (b4e5342); form không có header/logo riêng. Form đọc trực tiếp useLanguage từ LanguageContext của nhóm, không đọc useLocale riêng. metadata.title giữ tiêu đề tiếng Việt trên HTML và title sau hydration đồng bộ với context khi đổi ngôn ngữ/đổi trạng thái. Container dùng flex trong layout chung, có bố cục compact để desktop vừa cả Navbar/Footer và mobile không tràn ngang.
+
 ## Luồng thực tế
 
 Client kiểm tra cú pháp HTTP(S), độ dài 2048 ký tự và credentials/ký tự cấm; mọi URL qua bước cú pháp đều gửi đến backend, kể cả domain dịch vụ rút gọn đã biết. Máy chủ quyết định domain ToolHub, danh sách dịch vụ và kết quả kiểm tra redirect. Không dùng kết quả local để hiển thị thành công khi BE chưa trả lời.

@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState, use, Suspense } from 'react';
+import React, { useEffect, useState, use, Suspense } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { resolveSlug } from '@/lib/link-api';
+import { resolveShortUrl } from '@/lib/url-shortener';
 
 function RedirectHandler({
   paramsPromise,
@@ -11,17 +13,24 @@ function RedirectHandler({
 }) {
   const { slug } = use(paramsPromise);
   const router = useRouter();
+  const [targetUrl, setTargetUrl] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    if (!slug) return;
 
     resolveSlug(slug)
       .then((res) => {
         if (!isMounted) return;
 
         if (res.status === 'SUCCESS' && res.originalUrl) {
-          window.location.replace(res.originalUrl);
+          setTargetUrl(res.originalUrl);
+          timer = setTimeout(() => {
+            window.location.replace(res.originalUrl!);
+          }, 400);
         } else {
           router.replace(
             `/links/notice?slug=${encodeURIComponent(slug)}&status=${res.status.toLowerCase()}`,
@@ -29,12 +38,29 @@ function RedirectHandler({
         }
       })
       .catch(() => {
-        if (!isMounted) return;
-        setErrorMsg('Không thể kết nối tới máy chủ rút gọn liên kết.');
+        // Fallback kiểm tra qua url-shortener library
+        resolveShortUrl(slug)
+          .then((resolvedUrl) => {
+            if (!isMounted) return;
+            if (resolvedUrl) {
+              setTargetUrl(resolvedUrl);
+              timer = setTimeout(() => {
+                window.location.replace(resolvedUrl);
+              }, 400);
+            } else {
+              setErrorMsg('Không thể kết nối hoặc tìm thấy liên kết rút gọn.');
+            }
+          })
+          .catch(() => {
+            if (isMounted) {
+              setErrorMsg('Không thể kết nối tới máy chủ rút gọn liên kết.');
+            }
+          });
       });
 
     return () => {
       isMounted = false;
+      if (timer) clearTimeout(timer);
     };
   }, [slug, router]);
 
@@ -50,13 +76,21 @@ function RedirectHandler({
           <p className="text-sm font-semibold text-rose-600 dark:text-rose-400">
             {errorMsg}
           </p>
-          <button
-            type="button"
-            onClick={() => router.push('/')}
-            className="px-4 py-2 text-xs font-semibold rounded-xl bg-blue-600 text-white"
-          >
-            Về trang chủ
-          </button>
+          <div className="flex gap-2 justify-center pt-2">
+            <button
+              type="button"
+              onClick={() => router.push('/')}
+              className="px-4 py-2 text-xs font-semibold rounded-xl bg-blue-600 text-white"
+            >
+              Về trang chủ
+            </button>
+            <Link
+              href="/shorten-url"
+              className="px-4 py-2 text-xs font-semibold rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300"
+            >
+              Tạo link mới
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="space-y-3">
@@ -64,10 +98,16 @@ function RedirectHandler({
           <h2 className="text-base font-bold text-neutral-900 dark:text-neutral-100">
             Đang chuyển hướng...
           </h2>
-          <p className="text-xs text-neutral-400">
-            Bạn đang được chuyển tới URL đích cho mã link{' '}
-            <span className="font-mono font-bold">/{slug}</span>
-          </p>
+          {targetUrl ? (
+            <p className="text-xs text-neutral-500 font-mono truncate max-w-xs mx-auto">
+              {targetUrl}
+            </p>
+          ) : (
+            <p className="text-xs text-neutral-400">
+              Bạn đang được chuyển tới URL đích cho mã link{' '}
+              <span className="font-mono font-bold">/{slug}</span>
+            </p>
+          )}
         </div>
       )}
     </div>

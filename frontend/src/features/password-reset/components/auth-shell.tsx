@@ -1,13 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { useLanguage } from "@/context/LanguageContext";
+import { usePageTitle } from "@/lib/use-page-title";
 import { AuthIcon } from "./auth-icons";
 import styles from "../password-reset.module.css";
 
 const messages = {
   vi: {
-    language: "Ngôn ngữ",
+    forgotPageTitle: "Quên mật khẩu | ToolHub",
+    resetPageTitle: "Đặt lại mật khẩu | ToolHub",
     eyebrow: "KHÔI PHỤC TÀI KHOẢN",
     privacy: "Bảo mật tài khoản của bạn",
     footer: "Một tài khoản. Mọi tiện ích.",
@@ -76,7 +80,8 @@ const messages = {
     errorLabel: "Không thể hoàn tất yêu cầu",
   },
   en: {
-    language: "Language",
+    forgotPageTitle: "Forgot password | ToolHub",
+    resetPageTitle: "Reset password | ToolHub",
     eyebrow: "ACCOUNT RECOVERY",
     privacy: "Your account, protected",
     footer: "One account. Everyday tools.",
@@ -158,38 +163,11 @@ export function useAuthCopy() {
 export const loginUrl = process.env.NEXT_PUBLIC_LOGIN_URL || "/login";
 
 export function AuthShell({ children }: { children: ReactNode }) {
-  const [locale, setLocale] = useState<Locale>("vi");
+  const { locale } = useLanguage();
   const t = messages[locale];
   return (
     <AuthContext.Provider value={{ t, locale }}>
       <div className={styles.shell} lang={locale}>
-        <header className={styles.header}>
-          <Link href="/" className={styles.brand} aria-label="ToolHub">
-            Tool<span>Hub</span>
-            <span className={styles.brandDot} />
-          </Link>
-          <label className={styles.language}>
-            <span className={styles.srOnly}>{t.language}</span>
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              aria-hidden="true"
-            >
-              <circle cx="12" cy="12" r="9" />
-              <path d="M3 12h18M12 3a18 18 0 0 1 0 18 18 18 0 0 1 0-18Z" />
-            </svg>
-            <select
-              aria-label={t.language}
-              value={locale}
-              onChange={(event) => setLocale(event.target.value as Locale)}
-            >
-              <option value="vi">Tiếng Việt</option>
-              <option value="en">English</option>
-            </select>
-          </label>
-        </header>
         <main className={styles.main}>
           <div className={styles.authContent}>
             <aside
@@ -235,10 +213,6 @@ export function AuthShell({ children }: { children: ReactNode }) {
             {t.privacy}
           </p>
         </main>
-        <footer className={styles.footer}>
-          <span>© ToolHub</span>
-          <span>{t.footer}</span>
-        </footer>
       </div>
     </AuthContext.Provider>
   );
@@ -255,6 +229,11 @@ export function AuthCard({
   description: string;
   children?: ReactNode;
 }) {
+  const { t } = useAuthCopy();
+  const pathname = usePathname();
+  usePageTitle(
+    pathname === "/reset-password" ? t.resetPageTitle : t.forgotPageTitle,
+  );
   return (
     <section className={styles.card} aria-labelledby="auth-title">
       <div className={styles.iconBadge}>
