@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import { createContext, useContext, type ReactNode } from "react";
-import { useLocale } from "@/lib/use-locale";
+import { usePathname } from "next/navigation";
+import { useLanguage } from "@/context/LanguageContext";
+import { usePageTitle } from "@/lib/use-page-title";
 import { AuthIcon } from "./auth-icons";
 import styles from "../password-reset.module.css";
 
 const messages = {
   vi: {
-    language: "Ngôn ngữ",
+    forgotPageTitle: "Quên mật khẩu | ToolHub",
+    resetPageTitle: "Đặt lại mật khẩu | ToolHub",
     eyebrow: "KHÔI PHỤC TÀI KHOẢN",
     privacy: "Bảo mật tài khoản của bạn",
     footer: "Một tài khoản. Mọi tiện ích.",
@@ -77,7 +80,8 @@ const messages = {
     errorLabel: "Không thể hoàn tất yêu cầu",
   },
   en: {
-    language: "Language",
+    forgotPageTitle: "Forgot password | ToolHub",
+    resetPageTitle: "Reset password | ToolHub",
     eyebrow: "ACCOUNT RECOVERY",
     privacy: "Your account, protected",
     footer: "One account. Everyday tools.",
@@ -159,12 +163,11 @@ export function useAuthCopy() {
 export const loginUrl = process.env.NEXT_PUBLIC_LOGIN_URL || "/login";
 
 export function AuthShell({ children }: { children: ReactNode }) {
-  const locale = useLocale();
+  const { locale } = useLanguage();
   const t = messages[locale];
   return (
     <AuthContext.Provider value={{ t, locale }}>
       <div className={styles.shell} lang={locale}>
-        
         <main className={styles.main}>
           <div className={styles.authContent}>
             <aside
@@ -210,10 +213,6 @@ export function AuthShell({ children }: { children: ReactNode }) {
             {t.privacy}
           </p>
         </main>
-        <footer className={styles.footer}>
-          <span>© ToolHub</span>
-          <span>{t.footer}</span>
-        </footer>
       </div>
     </AuthContext.Provider>
   );
@@ -230,6 +229,11 @@ export function AuthCard({
   description: string;
   children?: ReactNode;
 }) {
+  const { t } = useAuthCopy();
+  const pathname = usePathname();
+  usePageTitle(
+    pathname === "/reset-password" ? t.resetPageTitle : t.forgotPageTitle,
+  );
   return (
     <section className={styles.card} aria-labelledby="auth-title">
       <div className={styles.iconBadge}>

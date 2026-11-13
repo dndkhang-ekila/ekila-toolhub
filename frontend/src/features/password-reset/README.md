@@ -2,6 +2,8 @@
 
 Giao diện trắng–xanh dương cho `/forgot-password` và `/reset-password?token=...`, hỗ trợ Việt/Anh và màn hình từ 360 px.
 
+Dùng đúng root layout, Navbar/Footer và LanguageProvider của PR #15 (b4e5342). AuthShell không tạo header hoặc footer riêng; form đọc trực tiếp useLanguage từ LanguageContext, không có state ngôn ngữ hay subscription useLocale riêng. Ba trang có metadata title mặc định ngay trên HTML; title sau hydration đồng bộ với LanguageContext và được cập nhật sau mỗi lần render card để không bị metadata ghi đè khi form thay đổi trạng thái. Giữ noindex/no-referrer và không lưu email/token/mật khẩu.
+
 ## Phạm vi đã triển khai
 
 - Form yêu cầu email, kiểm tra đầu vào, trạng thái tiếp nhận và gửi lại.
