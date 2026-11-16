@@ -53,6 +53,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   background: var(--background);
   color: var(--shell-color);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
