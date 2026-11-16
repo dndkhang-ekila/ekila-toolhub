@@ -8,6 +8,7 @@ import { QrScannerTool } from './QrScannerTool';
 import { ImageCompressorTool } from './ImageCompressorTool';
 import { PdfCompressorTool } from './PdfCompressorTool';
 import { DocScannerTool } from './DocScannerTool';
+import { UrlPolicyForm } from '@/features/url-policy/components/url-policy-form';
 
 interface ToolHostProps {
   tool: ToolDefinition;
@@ -27,6 +28,8 @@ export function ToolHost({ tool }: ToolHostProps) {
       return <PdfCompressorTool />;
     case 'doc-scanner':
       return <DocScannerTool />;
+    case 'url-check':
+      return <UrlPolicyForm />;
     default:
       return (
         <div className="rounded-2xl border border-border bg-card p-10 text-center">

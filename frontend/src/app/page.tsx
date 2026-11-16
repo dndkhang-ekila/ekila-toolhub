@@ -145,7 +145,7 @@ export default function Home() {
               {recentTools.map((tool) => (
                 <Link
                   key={`recent-${tool.slug}`}
-                  href={`/tools/${tool.slug}`}
+                  href={tool.href || `/tools/${tool.slug}`}
                   className="group flex items-center gap-3 rounded-xl border border-border/80 bg-card p-3 shadow-sm transition-all hover:border-primary/50 hover:shadow-md"
                 >
                   <div
@@ -214,7 +214,7 @@ export default function Home() {
               {filteredTools.map((tool) => (
                 <Link
                   key={tool.slug}
-                  href={`/tools/${tool.slug}`}
+                  href={tool.href || `/tools/${tool.slug}`}
                   onClick={() => handleToolClick(tool.slug)}
                   className="group relative flex flex-col justify-between rounded-2xl border border-border bg-card p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary/50 hover:shadow-lg hover:shadow-indigo-500/10"
                 >

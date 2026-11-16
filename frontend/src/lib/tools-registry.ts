@@ -20,6 +20,7 @@ export interface ToolDefinition {
   clientOnly: boolean;
   iconType: 'qr' | 'link' | 'image' | 'camera' | 'document' | 'code' | 'sparkles' | 'lock';
   gradient: string;
+  href?: string;
   seo: {
     title: string;
     description: string;
@@ -289,6 +290,45 @@ export const TOOLS: ToolDefinition[] = [
           question: 'Giấy tờ của tôi có được bảo mật không?',
           answer:
             'Hoàn toàn bảo mật. Thao tác xử lý diễn ra ngay trên máy của bạn nên dữ liệu không thể bị lộ ra ngoài.',
+        },
+      ],
+    },
+  },
+  {
+    slug: 'url-check',
+    title: 'Kiểm tra liên kết',
+    shortDescription: 'Kiểm tra độ an toàn của URL, chặn dịch vụ rút gọn lồng nhau, mã độc và chuyển hướng lạ.',
+    category: 'qr-link',
+    clientOnly: false,
+    iconType: 'lock',
+    gradient: 'from-violet-600 to-indigo-600',
+    href: '/url-check',
+    seo: {
+      title: 'Kiểm Tra Liên Kết Online - Phát Hiện URL Độc Hại & Chống Rút Gọn Lồng Nhau',
+      description:
+        'Công cụ kiểm tra liên kết trực tuyến của ToolHub, phát hiện domain lừa đảo, chuyển hướng lồng nhau và mã độc bảo vệ an toàn người dùng.',
+      keywords: ['kiểm tra link', 'url check', 'check url an toan', 'kiem tra lien ket', 'chống lừa đảo url'],
+      features: [
+        'Kiểm tra tính an toàn của URL đích trước khi chia sẻ hoặc mở liên kết',
+        'Phát hiện và ngăn chặn rút gọn liên kết lồng nhau từ các dịch vụ khác (Bitly, TinyURL...)',
+        'Tự động truy vết chuỗi chuyển hướng (HTTP Redirects) tối đa 5 bước',
+        'Bảo vệ chống tấn công giả mạo SSRF và các địa chỉ mạng nội bộ độc hại',
+      ],
+      howToUse: [
+        'Dán liên kết (URL) cần kiểm tra an toàn vào ô nhập liệu',
+        'Nhấn nút Kiểm tra liên kết',
+        'Xem kết quả đánh giá chi tiết: Cho phép hoặc Lý do bị từ chối/cảnh báo',
+      ],
+      faqs: [
+        {
+          question: 'Công cụ có mở hay tải dữ liệu từ trang web đích không?',
+          answer:
+            'Không. Hệ thống chỉ kiểm tra tiêu đề HTTP header và tên miền theo chuẩn bảo mật, không thực thi mã JavaScript hay tải nội dung trang web về thiết bị.',
+        },
+        {
+          question: 'Tại sao các liên kết rút gọn khác (như bit.ly) lại bị chặn?',
+          answer:
+            'Theo chính sách an toàn của ToolHub, hệ thống không cho phép rút gọn chồng chéo để ngăn chặn hành vi ẩn giấu liên kết lừa đảo.',
         },
       ],
     },
