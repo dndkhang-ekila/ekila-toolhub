@@ -144,6 +144,7 @@ export function ForgotPasswordForm() {
         noValidate
         onSubmit={submit}
         aria-busy={busy}
+        suppressHydrationWarning
       >
         <div className={styles.field}>
           <label htmlFor="reset-email">{t.email}</label>
