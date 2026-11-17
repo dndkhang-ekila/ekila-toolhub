@@ -167,9 +167,9 @@ export function AuthShell({ children }: { children: ReactNode }) {
   const t = messages[locale];
   return (
     <AuthContext.Provider value={{ t, locale }}>
-      <div className={styles.shell} lang={locale}>
-        <main className={styles.main}>
-          <div className={styles.authContent}>
+      <div className={styles.shell} lang={locale} suppressHydrationWarning>
+        <main className={styles.main} suppressHydrationWarning>
+          <div className={styles.authContent} suppressHydrationWarning>
             <aside
               className={styles.guide}
               aria-labelledby="recovery-guide-title"
@@ -235,7 +235,7 @@ export function AuthCard({
     pathname === "/reset-password" ? t.resetPageTitle : t.forgotPageTitle,
   );
   return (
-    <section className={styles.card} aria-labelledby="auth-title">
+    <section className={styles.card} aria-labelledby="auth-title" suppressHydrationWarning>
       <div className={styles.iconBadge}>
         <AuthIcon name={icon} />
       </div>

@@ -116,16 +116,16 @@ export function UrlPolicyForm() {
           : t.allowed;
 
   return (
-    <div className={styles.shell} lang={locale}>
-      <main className={styles.main}>
-        <div className={styles.content}>
+    <div className={styles.shell} lang={locale} suppressHydrationWarning>
+      <main className={styles.main} suppressHydrationWarning>
+        <div className={styles.content} suppressHydrationWarning>
           <div className={styles.intro}>
             <p className={styles.eyebrow}>{t.eyebrow}</p>
             <h1>{t.title}</h1>
             <p className={styles.subtitle}>{t.subtitle}</p>
           </div>
 
-          <section className={styles.panel} aria-labelledby="url-policy-title">
+          <section className={styles.panel} aria-labelledby="url-policy-title" suppressHydrationWarning>
             <div className={styles.panelHeading}>
               <span className={styles.iconTile}>
                 <PolicyIcon name="link" />
@@ -136,7 +136,7 @@ export function UrlPolicyForm() {
               </div>
             </div>
 
-            <form noValidate onSubmit={submit} aria-busy={busy}>
+            <form noValidate onSubmit={submit} aria-busy={busy} suppressHydrationWarning>
               <label htmlFor="original-url" className={styles.label}>
                 {t.input}
               </label>
