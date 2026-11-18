@@ -7,25 +7,35 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '../ui/Button';
 import { Alert } from '../ui/Alert';
 import { MailIcon, CheckCircleIcon, ArrowLeftIcon, SpinnerIcon } from '../ui/Icons';
-import { validateVerificationCode } from '@/lib/validation';
+import { validateEmail, validateVerificationCode } from '@/lib/validation';
 
-export function VerifyEmailCard() {
+interface VerifyEmailCardInnerProps {
+  emailParam: string;
+  tokenParam: string;
+  mailStatusParam: string;
+}
+
+function VerifyEmailCardInner({
+  emailParam,
+  tokenParam,
+  mailStatusParam,
+}: VerifyEmailCardInnerProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { verifyEmail, resendVerification } = useAuth();
 
-  const emailParam = searchParams.get('email') || '';
-  const tokenParam = searchParams.get('token') || '';
+  const [manualEmail, setManualEmail] = useState('');
+  const [isEditingEmail, setIsEditingEmail] = useState(!emailParam);
+  const activeEmail = emailParam || manualEmail;
 
-  const [email, setEmail] = useState(emailParam);
   // OTP 6 digits input state
   const [digits, setDigits] = useState<string[]>(['', '', '', '', '', '']);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [countdown, setCountdown] = useState(60);
-  const [canResend, setCanResend] = useState(false);
+  const [mailStatus, setMailStatus] = useState<string>(mailStatusParam);
+  const [countdown, setCountdown] = useState(mailStatusParam ? 0 : 60);
+  const [canResend, setCanResend] = useState(Boolean(mailStatusParam));
 
   const [error, setError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
@@ -55,13 +65,14 @@ export function VerifyEmailCard() {
 
       try {
         const payload = {
-          email: email.trim().toLowerCase(),
+          email: activeEmail.trim().toLowerCase(),
           code: codeToVerify,
           token: tokenToVerify,
         };
 
         await verifyEmail(payload);
         setIsSuccess(true);
+        setMailStatus('');
         setInfoMessage('Xác minh địa chỉ email thành công!');
 
         // Tự động chuyển hướng sau 2 giây
@@ -78,7 +89,7 @@ export function VerifyEmailCard() {
         setIsVerifying(false);
       }
     },
-    [email, router, verifyEmail]
+    [activeEmail, router, verifyEmail]
   );
 
   // Tự động kích hoạt nếu có token từ query params (link trong email gửi tới)
@@ -144,17 +155,46 @@ export function VerifyEmailCard() {
     handleVerify(code);
   };
 
-  const handleResend = async () => {
-    if (!canResend || isResending) return;
-    if (!email) {
-      setError('Vui lòng nhập địa chỉ email cần gửi lại mã xác minh.');
+  const finishEditingEmail = () => {
+    const emailValidation = validateEmail(manualEmail);
+    if (!emailValidation.isValid) {
+      setError(emailValidation.error || 'Địa chỉ email không đúng định dạng.');
       return;
     }
+    setManualEmail(manualEmail.trim().toLowerCase());
+    setError(null);
+    setIsEditingEmail(false);
+  };
+
+  const handleResend = async () => {
+    if (!canResend || isResending) return;
+    const emailValidation = validateEmail(activeEmail);
+    if (!emailValidation.isValid) {
+      setError(
+        emailValidation.error ||
+          'Vui lòng nhập địa chỉ email hợp lệ cần gửi lại mã xác minh.'
+      );
+      return;
+    }
+    setIsEditingEmail(false);
 
     setIsResending(true);
     setError(null);
+    setInfoMessage(null);
     try {
-      const res = await resendVerification({ email: email.trim().toLowerCase() });
+      const res = await resendVerification({
+        email: activeEmail.trim().toLowerCase(),
+      });
+      if (!res.success || res.emailSent === false) {
+        setMailStatus(res.deliveryMode || 'failed');
+        setError(
+          res.message ||
+            'Chưa thể gửi email xác minh qua SMTP. Vui lòng kiểm tra cấu hình SMTP trong backend/.env.'
+        );
+        return;
+      }
+
+      setMailStatus('');
       setInfoMessage(res.message || 'Mã xác minh mới đã được gửi vào hộp thư của bạn.');
       setCountdown(60);
       setCanResend(false);
@@ -186,35 +226,99 @@ export function VerifyEmailCard() {
         <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
           {isSuccess
             ? 'Tài khoản của bạn đã được kích hoạt. Đang chuyển hướng vào hệ thống...'
-            : `Chúng tôi đã gửi mã xác nhận 6 chữ số đến`}
+            : mailStatus
+              ? 'Tài khoản đã được tạo cho địa chỉ email:'
+              : 'Chúng tôi đã gửi mã xác nhận 6 chữ số đến'}
         </p>
         {!isSuccess && (
-          email ? (
+          emailParam ? (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-center">
+                <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800/80 py-1 px-3 rounded-full inline-block">
+                  {activeEmail}
+                </span>
+              </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                Nhập nhầm email?{' '}
+                <Link
+                  href="/register"
+                  className="text-blue-600 dark:text-blue-400 font-semibold hover:underline"
+                >
+                  Đăng ký lại bằng email khác
+                </Link>
+              </p>
+            </div>
+          ) : !isEditingEmail && manualEmail ? (
             <div className="flex items-center justify-center gap-2">
               <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800/80 py-1 px-3 rounded-full inline-block">
-                {email}
+                {manualEmail}
               </span>
               <button
                 type="button"
-                onClick={() => setEmail('')}
+                onClick={() => {
+                  setError(null);
+                  setIsEditingEmail(true);
+                }}
                 className="text-xs text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
               >
-                Đổi email
+                Nhập email khác
               </button>
             </div>
           ) : (
-            <div className="max-w-xs mx-auto pt-1">
-              <input
-                type="email"
-                placeholder="Nhập email cần xác minh"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full text-center text-xs py-1.5 px-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
+            <div className="max-w-xs mx-auto pt-1 space-y-1.5">
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="email"
+                  placeholder="Nhập email tài khoản đã đăng ký"
+                  value={manualEmail}
+                  autoFocus
+                  onChange={(e) => {
+                    setManualEmail(e.target.value);
+                    if (error) setError(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      finishEditingEmail();
+                    }
+                  }}
+                  className="w-full text-center text-xs py-1.5 px-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                {manualEmail.trim() && (
+                  <button
+                    type="button"
+                    onClick={finishEditingEmail}
+                    className="shrink-0 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition cursor-pointer"
+                  >
+                    Xong
+                  </button>
+                )}
+              </div>
+              <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
+                Áp dụng cho email đã đăng ký tài khoản ToolHub. Chưa có?{' '}
+                <Link
+                  href="/register"
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Đăng ký ngay
+                </Link>
+              </p>
             </div>
           )
         )}
       </div>
+
+      {!isSuccess && (mailStatus === 'ethereal' || mailStatus === 'console') && (
+        <Alert variant="warning">
+          Máy chủ backend chưa cấu hình SMTP thật (<code>SMTP_USER</code> / <code>SMTP_PASS</code> trong <code>backend/.env</code>) nên email chưa gửi được về hộp thư cá nhân. Bạn có thể cấu hình SMTP rồi bấm <strong>Gửi lại mã xác minh</strong>, hoặc lấy mã OTP 6 chữ số / link xem trước trong terminal backend để kích hoạt tài khoản.
+        </Alert>
+      )}
+
+      {!isSuccess && mailStatus === 'failed' && !error && (
+        <Alert variant="warning">
+          Hệ thống gặp lỗi khi gửi email xác minh qua máy chủ SMTP. Vui lòng kiểm tra cấu hình SMTP trong <code>backend/.env</code> và bấm <strong>Gửi lại mã xác minh</strong>.
+        </Alert>
+      )}
 
       {error && (
         <Alert variant="error" onClose={() => setError(null)}>
@@ -268,13 +372,6 @@ export function VerifyEmailCard() {
             </div>
           </div>
 
-          {/* Gợi ý test phía client khi backend chưa kết nối SMTP */}
-          <div className="p-2.5 rounded-lg bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/40 text-center">
-            <p className="text-[11px] text-blue-700 dark:text-blue-300 leading-relaxed">
-              💡 <strong>Chế độ phát triển (Dev Mode):</strong> Vì Backend chưa cấu hình máy chủ gửi mail SMTP thật, bạn có thể nhập 6 số bất kỳ (ví dụ: <span className="font-bold underline">123456</span>) và bấm xác minh để kích hoạt tài khoản ngay.
-            </p>
-          </div>
-
           <Button
             type="submit"
             variant="primary"
@@ -317,5 +414,21 @@ export function VerifyEmailCard() {
         </form>
       )}
     </div>
+  );
+}
+
+export function VerifyEmailCard() {
+  const searchParams = useSearchParams();
+  const emailParam = searchParams.get('email') || '';
+  const tokenParam = searchParams.get('token') || '';
+  const mailStatusParam = searchParams.get('mailStatus') || '';
+
+  return (
+    <VerifyEmailCardInner
+      key={`${emailParam}|${tokenParam}|${mailStatusParam}`}
+      emailParam={emailParam}
+      tokenParam={tokenParam}
+      mailStatusParam={mailStatusParam}
+    />
   );
 }

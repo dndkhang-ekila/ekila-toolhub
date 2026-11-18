@@ -4,6 +4,7 @@ import {
   RegisterData,
   VerifyEmailData,
   ResendVerificationData,
+  ResendVerificationResponse,
   User,
 } from '@/types/auth';
 
@@ -133,7 +134,7 @@ async function request<T>(
     }
     // Network / fetch error
     throw new ApiError(
-      'Không thể kết nối tới máy chủ backend. Vui lòng kiểm tra lại kết nối mạng.',
+      'Không thể kết nối tới máy chủ backend. Vui lòng kiểm tra backend đã khởi động hoặc kết nối mạng.',
       0,
       err
     );
@@ -149,28 +150,14 @@ export const authApi = {
    * POST /api/v1/auth/register
    */
   async register(data: Omit<RegisterData, 'confirmPassword'>): Promise<AuthResponse> {
-    try {
-      const response = await request<AuthResponse>('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: data.email.trim().toLowerCase(),
-          password: data.password,
-          locale: data.locale || 'vi',
-        }),
-      });
-      return response;
-    } catch (err: unknown) {
-      // Nếu backend chưa chạy hoặc chưa có route (scaffold mode), tạo mock response hợp lệ cho frontend trải nghiệm
-      if (err instanceof ApiError && (err.statusCode === 0 || err.statusCode === 404)) {
-        return {
-          success: true,
-          message: 'Đăng ký thành công! Vui lòng kiểm tra hộp thư để xác minh email.',
-          requiresEmailVerification: true,
-          verificationEmail: data.email.trim().toLowerCase(),
-        };
-      }
-      throw err;
-    }
+    return await request<AuthResponse>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: data.email.trim().toLowerCase(),
+        password: data.password,
+        locale: data.locale || 'vi',
+      }),
+    });
   },
 
   /**
@@ -178,49 +165,22 @@ export const authApi = {
    * POST /api/v1/auth/login
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    try {
-      const response = await request<AuthResponse>('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({
-          email: credentials.email.trim().toLowerCase(),
-          password: credentials.password,
-        }),
-      });
+    const response = await request<AuthResponse>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: credentials.email.trim().toLowerCase(),
+        password: credentials.password,
+      }),
+    });
 
-      if (response.tokens?.accessToken) {
-        tokenStorage.set(response.tokens.accessToken);
-      }
-      if (response.user) {
-        tokenStorage.setUser(response.user);
-      }
-
-      return response;
-    } catch (err: unknown) {
-      // Mock fallback nếu backend trả 404 (chưa code route) hoặc lỗi kết nối
-      if (err instanceof ApiError && (err.statusCode === 0 || err.statusCode === 404)) {
-        // Mock demo user tuân theo SRS (User entity: id, email, role, plan, locale, ngày tạo)
-        const mockUser: User = {
-          id: 'usr_' + Math.random().toString(36).substring(2, 9),
-          email: credentials.email.trim().toLowerCase(),
-          role: 'free',
-          plan: 'free',
-          locale: 'vi',
-          isEmailVerified: true,
-          createdAt: new Date().toISOString(),
-        };
-        const mockToken = 'mock_jwt_' + Math.random().toString(36).substring(2, 16);
-        tokenStorage.set(mockToken);
-        tokenStorage.setUser(mockUser);
-
-        return {
-          success: true,
-          message: 'Đăng nhập thành công (Chế độ mô phỏng giao diện)',
-          user: mockUser,
-          tokens: { accessToken: mockToken },
-        };
-      }
-      throw err;
+    if (response.tokens?.accessToken) {
+      tokenStorage.set(response.tokens.accessToken);
     }
+    if (response.user) {
+      tokenStorage.setUser(response.user);
+    }
+
+    return response;
   },
 
   /**
@@ -228,65 +188,32 @@ export const authApi = {
    * POST /api/v1/auth/verify-email
    */
   async verifyEmail(data: VerifyEmailData): Promise<AuthResponse> {
-    try {
-      const response = await request<AuthResponse>('/auth/verify-email', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
+    const response = await request<AuthResponse>('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
 
-      if (response.tokens?.accessToken) {
-        tokenStorage.set(response.tokens.accessToken);
-      }
-      if (response.user) {
-        tokenStorage.setUser(response.user);
-      }
-
-      return response;
-    } catch (err: unknown) {
-      if (err instanceof ApiError && (err.statusCode === 0 || err.statusCode === 404)) {
-        const mockUser: User = {
-          id: 'usr_' + Math.random().toString(36).substring(2, 9),
-          email: data.email || 'user@example.com',
-          role: 'free',
-          plan: 'free',
-          locale: 'vi',
-          isEmailVerified: true,
-          createdAt: new Date().toISOString(),
-        };
-        const mockToken = 'mock_jwt_verified_' + Math.random().toString(36).substring(2, 16);
-        tokenStorage.set(mockToken);
-        tokenStorage.setUser(mockUser);
-
-        return {
-          success: true,
-          message: 'Xác minh email thành công!',
-          user: mockUser,
-          tokens: { accessToken: mockToken },
-        };
-      }
-      throw err;
+    if (response.tokens?.accessToken) {
+      tokenStorage.set(response.tokens.accessToken);
     }
+    if (response.user) {
+      tokenStorage.setUser(response.user);
+    }
+
+    return response;
   },
 
   /**
    * Gửi lại mã xác minh email
    * POST /api/v1/auth/resend-verification
    */
-  async resendVerification(data: ResendVerificationData): Promise<{ success: boolean; message: string }> {
-    try {
-      return await request<{ success: boolean; message: string }>('/auth/resend-verification', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
-    } catch (err: unknown) {
-      if (err instanceof ApiError && (err.statusCode === 0 || err.statusCode === 404)) {
-        return {
-          success: true,
-          message: `Mã xác minh mới đã được gửi tới ${data.email}. Vui lòng kiểm tra hộp thư.`,
-        };
-      }
-      throw err;
-    }
+  async resendVerification(data: ResendVerificationData): Promise<ResendVerificationResponse> {
+    return await request<ResendVerificationResponse>('/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: data.email.trim().toLowerCase(),
+      }),
+    });
   },
 
   /**
@@ -294,46 +221,19 @@ export const authApi = {
    * POST /api/v1/auth/google
    */
   async loginWithGoogle(credential: string): Promise<AuthResponse> {
-    try {
-      const response = await request<AuthResponse>('/auth/google', {
-        method: 'POST',
-        body: JSON.stringify({ credential }),
-      });
+    const response = await request<AuthResponse>('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ credential }),
+    });
 
-      if (response.tokens?.accessToken) {
-        tokenStorage.set(response.tokens.accessToken);
-      }
-      if (response.user) {
-        tokenStorage.setUser(response.user);
-      }
-
-      return response;
-    } catch (err: unknown) {
-      if (err instanceof ApiError && (err.statusCode === 0 || err.statusCode === 404)) {
-        const mockUser: User = {
-          id: 'usr_google_' + Math.random().toString(36).substring(2, 9),
-          email: 'google.user@example.com',
-          name: 'Google User',
-          avatarUrl: 'https://lh3.googleusercontent.com/a/default-user',
-          role: 'free',
-          plan: 'free',
-          locale: 'vi',
-          isEmailVerified: true,
-          createdAt: new Date().toISOString(),
-        };
-        const mockToken = 'mock_google_jwt_' + Math.random().toString(36).substring(2, 16);
-        tokenStorage.set(mockToken);
-        tokenStorage.setUser(mockUser);
-
-        return {
-          success: true,
-          message: 'Đăng nhập Google thành công!',
-          user: mockUser,
-          tokens: { accessToken: mockToken },
-        };
-      }
-      throw err;
+    if (response.tokens?.accessToken) {
+      tokenStorage.set(response.tokens.accessToken);
     }
+    if (response.user) {
+      tokenStorage.setUser(response.user);
+    }
+
+    return response;
   },
 
   /**
@@ -345,8 +245,12 @@ export const authApi = {
       const user = await request<User>('/auth/me', { method: 'GET' });
       tokenStorage.setUser(user);
       return user;
-    } catch {
-      // Fallback lấy từ local storage
+    } catch (err: unknown) {
+      if (err instanceof ApiError && err.statusCode === 401) {
+        tokenStorage.remove();
+        return null;
+      }
+      // Fallback lấy từ local storage nếu backend tạm mất kết nối
       return tokenStorage.getUser();
     }
   },

@@ -94,6 +94,48 @@ describe('MailerService', () => {
     );
   });
 
+  it('tự dùng SMTP_USER làm địa chỉ From nếu MAIL_FROM đang là placeholder @toolhub.local và hỗ trợ SMTP_PASSWORD', async () => {
+    mockConfigService.get.mockImplementation((key: string) => {
+      switch (key) {
+        case 'FRONTEND_URL':
+          return 'http://localhost:3000';
+        case 'SMTP_HOST':
+          return 'smtp.gmail.com';
+        case 'SMTP_PORT':
+          return 587;
+        case 'SMTP_USER':
+          return 'sender@gmail.com';
+        case 'SMTP_PASSWORD':
+          return 'abcd efgh ijkl mnop';
+        case 'MAIL_FROM':
+          return '"ToolHub" <no-reply@toolhub.local>';
+        default:
+          return undefined;
+      }
+    });
+
+    const delivery = await service.sendVerificationEmailWithResult(
+      'recipient@example.com',
+      '123456',
+      'token-abc',
+    );
+
+    expect(delivery).toEqual({ sent: true, mode: 'smtp' });
+    expect(nodemailer.createTransport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        auth: {
+          user: 'sender@gmail.com',
+          pass: 'abcdefghijklmnop',
+        },
+      }),
+    );
+    expect(mockSendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: '"ToolHub" <sender@gmail.com>',
+      }),
+    );
+  });
+
   it('xử lý lỗi SMTP gracefully mà không gây crash hệ thống', async () => {
     mockSendMail.mockRejectedValueOnce(new Error('Connection refused'));
 
@@ -104,6 +146,23 @@ describe('MailerService', () => {
     );
 
     expect(result).toBe(false);
+  });
+
+  it('trả về mode failed nếu SMTP từ chối người nhận', async () => {
+    mockSendMail.mockResolvedValueOnce({
+      messageId: 'rejected-id',
+      rejected: ['recipient@example.com'],
+    });
+
+    const delivery = await service.sendVerificationEmailWithResult(
+      'recipient@example.com',
+      '123456',
+      'token-abc',
+    );
+
+    expect(delivery.sent).toBe(false);
+    expect(delivery.mode).toBe('failed');
+    expect(delivery.error).toContain('recipient@example.com');
   });
 
   it('hoạt động chế độ fallback/Ethereal khi chưa cấu hình credentials', async () => {

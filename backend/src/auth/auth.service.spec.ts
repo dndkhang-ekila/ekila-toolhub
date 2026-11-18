@@ -73,10 +73,72 @@ describe('AuthService', () => {
       });
 
       expect(result.success).toBe(true);
+      expect(result.emailSent).toBe(true);
+      expect(result.deliveryMode).toBe('smtp');
       expect(result.requiresEmailVerification).toBe(true);
       expect(result.verificationEmail).toBe('test@example.com');
       expect(mockUserRepository.save).toHaveBeenCalled();
       expect(mockMailerService.sendVerificationEmail).toHaveBeenCalled();
+    });
+
+    it('trả về emailSent = false khi backend chưa cấu hình SMTP thật (chế độ ethereal)', async () => {
+      mockUserRepository.findOne.mockResolvedValue(null);
+      mockUserRepository.create.mockImplementation((dto: any) => ({
+        ...dto,
+        id: 'usr-456',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }));
+      mockUserRepository.save.mockImplementation((user: any) =>
+        Promise.resolve(user),
+      );
+      mockMailerService.sendVerificationEmailWithResult = jest
+        .fn()
+        .mockResolvedValue({
+          sent: true,
+          mode: 'ethereal',
+          previewUrl: 'https://ethereal.email/message/mock',
+        });
+
+      const result = await service.register({
+        email: 'user@gmail.com',
+        password: 'Password123@',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.emailSent).toBe(false);
+      expect(result.deliveryMode).toBe('ethereal');
+      expect(result.message).toContain('chưa cấu hình SMTP');
+    });
+
+    it('trả về emailSent = false và thông báo lỗi khi gửi SMTP thất bại', async () => {
+      mockUserRepository.findOne.mockResolvedValue(null);
+      mockUserRepository.create.mockImplementation((dto: any) => ({
+        ...dto,
+        id: 'usr-789',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }));
+      mockUserRepository.save.mockImplementation((user: any) =>
+        Promise.resolve(user),
+      );
+      mockMailerService.sendVerificationEmailWithResult = jest
+        .fn()
+        .mockResolvedValue({
+          sent: false,
+          mode: 'failed',
+          error: '535 Invalid login',
+        });
+
+      const result = await service.register({
+        email: 'user@gmail.com',
+        password: 'Password123@',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.emailSent).toBe(false);
+      expect(result.deliveryMode).toBe('failed');
+      expect(result.emailError).toBe('535 Invalid login');
     });
 
     it('báo lỗi BadRequestException khi email đã tồn tại', async () => {
@@ -91,6 +153,48 @@ describe('AuthService', () => {
           password: 'Password123@',
         }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('gợi ý xác minh khi email đã đăng ký trước đó nhưng chưa xác minh', async () => {
+      mockUserRepository.findOne.mockResolvedValue({
+        id: 'usr-unverified',
+        email: 'unverified@example.com',
+        isEmailVerified: false,
+      });
+
+      await expect(
+        service.register({
+          email: 'unverified@example.com',
+          password: 'Password123@',
+        }),
+      ).rejects.toThrow('chưa xác minh');
+    });
+  });
+
+  describe('resendVerification', () => {
+    it('trả về emailSent = false và success = false khi chưa cấu hình SMTP', async () => {
+      mockUserRepository.findOne.mockResolvedValue({
+        id: 'usr-123',
+        email: 'test@gmail.com',
+        isEmailVerified: false,
+      });
+      mockUserRepository.save.mockImplementation((user: any) =>
+        Promise.resolve(user),
+      );
+      mockMailerService.sendVerificationEmailWithResult = jest
+        .fn()
+        .mockResolvedValue({
+          sent: true,
+          mode: 'console',
+        });
+
+      const result = await service.resendVerification({
+        email: 'test@gmail.com',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.emailSent).toBe(false);
+      expect(result.deliveryMode).toBe('console');
     });
   });
 

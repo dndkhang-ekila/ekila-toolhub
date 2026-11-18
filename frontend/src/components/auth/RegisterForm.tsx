@@ -35,6 +35,7 @@ export function RegisterForm() {
   }>({});
 
   const [serverError, setServerError] = useState<string | null>(null);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleValidate = () => {
@@ -66,27 +67,37 @@ export function RegisterForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setServerError(null);
+    setUnverifiedEmail(null);
 
     if (!handleValidate()) {
       return;
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
     setIsSubmitting(true);
     try {
-      await register({
-        email,
+      const res = await register({
+        email: normalizedEmail,
         password,
         locale: 'vi',
       });
 
       // Theo SRS FR-ACC-01: Đăng ký có xác minh email
-      // Sau khi tạo tài khoản thành công, điều hướng đến màn hình xác minh email
-      router.push(`/verify-email?email=${encodeURIComponent(email.trim().toLowerCase())}`);
+      // Sau khi tạo tài khoản thành công, điều hướng đến màn hình xác minh email kèm trạng thái gửi mail
+      const targetEmail = res.verificationEmail || normalizedEmail;
+      const params = new URLSearchParams({ email: targetEmail });
+      if (res.emailSent === false) {
+        params.set('mailStatus', res.deliveryMode || 'failed');
+      }
+      router.push(`/verify-email?${params.toString()}`);
     } catch (err: unknown) {
       const message =
         err instanceof Error
           ? err.message
           : 'Đăng ký không thành công. Vui lòng thử lại sau.';
+      if (message.toLowerCase().includes('chưa xác minh')) {
+        setUnverifiedEmail(normalizedEmail);
+      }
       setServerError(message);
     } finally {
       setIsSubmitting(false);
@@ -105,8 +116,26 @@ export function RegisterForm() {
       </div>
 
       {serverError && (
-        <Alert variant="error" onClose={() => setServerError(null)}>
-          {serverError}
+        <Alert
+          variant="error"
+          onClose={() => {
+            setServerError(null);
+            setUnverifiedEmail(null);
+          }}
+        >
+          <div className="space-y-2">
+            <p>{serverError}</p>
+            {unverifiedEmail && (
+              <div>
+                <Link
+                  href={`/verify-email?email=${encodeURIComponent(unverifiedEmail)}`}
+                  className="font-semibold underline hover:text-red-900 dark:hover:text-red-200"
+                >
+                  Đi tới trang xác minh & gửi lại mã →
+                </Link>
+              </div>
+            )}
+          </div>
         </Alert>
       )}
 
