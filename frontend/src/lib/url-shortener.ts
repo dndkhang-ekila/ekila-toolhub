@@ -289,14 +289,6 @@ export async function createShortUrl(
 export async function resolveShortUrl(slug: string): Promise<string | null> {
   if (!slug) return null;
 
-  // 1. Kiểm tra localStorage trước (nhanh trên máy vừa tạo)
-  const localLinks = getRecentShortenedLinks();
-  const match = localLinks.find((item) => item.slug === slug);
-  if (match?.originalUrl) {
-    return match.originalUrl;
-  }
-
-  // 2. Tra cứu từ Backend API
   try {
     const res = await fetch(`${API_BASE}/links/${encodeURIComponent(slug)}`, {
       method: 'GET',
@@ -308,7 +300,7 @@ export async function resolveShortUrl(slug: string): Promise<string | null> {
 
     if (res.ok) {
       const data = await res.json();
-      if (data && data.originalUrl) {
+      if (data && data.originalUrl && data.isActive !== false) {
         saveShortenedLink({
           id: data.id || `link_${data.slug}`,
           originalUrl: data.originalUrl,
@@ -319,9 +311,22 @@ export async function resolveShortUrl(slug: string): Promise<string | null> {
         });
         return data.originalUrl;
       }
+      return null;
+    }
+
+    if (res.status === 404 || res.status === 403 || res.status === 410) {
+      const stale = getRecentShortenedLinks().find((item) => item.slug === slug);
+      if (stale) {
+        removeShortenedLink(stale.id);
+      }
+      return null;
     }
   } catch {
-    // Network / offline fallback
+    const localLinks = getRecentShortenedLinks();
+    const match = localLinks.find((item) => item.slug === slug);
+    if (match?.originalUrl) {
+      return match.originalUrl;
+    }
   }
 
   return null;

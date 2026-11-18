@@ -4,11 +4,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Response } from 'express';
 import { LinksController } from './links.controller';
 import { LinksService } from './services/links.service';
+import { ReportsService } from './services/reports.service';
 import { UrlSafetyService } from './services/url-safety.service';
 
 describe('LinksController', () => {
   let controller: LinksController;
   let linksService: LinksService;
+  let reportsService: ReportsService;
   let urlSafetyService: UrlSafetyService;
 
   beforeEach(async () => {
@@ -22,6 +24,19 @@ describe('LinksController', () => {
             resolveRedirect: jest.fn(),
             getLinkDetails: jest.fn(),
             deleteLink: jest.fn(),
+          },
+        },
+        {
+          provide: ReportsService,
+          useValue: {
+            submitReport: jest.fn().mockResolvedValue({
+              success: true,
+              message: 'Báo cáo vi phạm đã được ghi nhận',
+              reportId: 'rep_123',
+            }),
+            getAdminQueue: jest.fn(),
+            getReportById: jest.fn(),
+            handleAdminAction: jest.fn(),
           },
         },
         {
@@ -44,6 +59,7 @@ describe('LinksController', () => {
 
     controller = module.get<LinksController>(LinksController);
     linksService = module.get<LinksService>(LinksService);
+    reportsService = module.get<ReportsService>(ReportsService);
     urlSafetyService = module.get<UrlSafetyService>(UrlSafetyService);
   });
 
@@ -107,5 +123,24 @@ describe('LinksController', () => {
       HttpStatus.FOUND,
       'https://example.com/dest',
     );
+  });
+
+  it('should handle submitReport on report endpoint', async () => {
+    const fakeReq = {
+      headers: { 'x-forwarded-for': '1.2.3.4' },
+      socket: {},
+    } as unknown as Parameters<typeof controller.submitReport>[1];
+
+    const spy = jest.spyOn(reportsService, 'submitReport');
+    const res = await controller.submitReport(
+      { slug: 'bad-slug', reason: 'PHISHING' },
+      fakeReq,
+    );
+
+    expect(spy).toHaveBeenCalledWith(
+      { slug: 'bad-slug', reason: 'PHISHING' },
+      '1.2.3.4',
+    );
+    expect(res.success).toBe(true);
   });
 });
