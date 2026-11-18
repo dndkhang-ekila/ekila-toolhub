@@ -8,8 +8,14 @@ import {
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { CreateShortLinkDto } from '../dto/create-short-link.dto';
+import { UpdateShortLinkDto } from '../dto/update-short-link.dto';
 import { LinksRepository } from '../links.repository';
-import { CreateLinkResult, LinkRecord } from '../links.types';
+import {
+  CreateLinkResult,
+  LinkRecord,
+  ResolveLinkResult,
+} from '../links.types';
+import { hashIpWithDailySalt } from '../utils/links.utils';
 import { UrlSafetyService } from './url-safety.service';
 
 @Injectable()
@@ -32,14 +38,108 @@ export class LinksService {
 
   hashIpDaily(rawIp?: string): string {
     const ip = rawIp || '127.0.0.1';
-    const dateStr = new Date().toISOString().slice(0, 10);
     const saltSecret =
       this.configService.get<string>('IP_HASH_SECRET') ||
+      this.configService.get<string>('SECRET_SALT') ||
       'toolhub-daily-rotation-salt';
-    return crypto
-      .createHash('sha256')
-      .update(`${ip}:${dateStr}:${saltSecret}`)
-      .digest('hex');
+    return hashIpWithDailySalt(ip, saltSecret);
+  }
+
+  async resolveLinkAndTrack(
+    slug: string,
+    reqInfo: { ip: string; userAgent: string; referer: string },
+  ): Promise<ResolveLinkResult> {
+    const record = await this.linksRepository.findBySlug(slug);
+
+    if (!record) {
+      return { status: 'NOT_FOUND' };
+    }
+
+    if (!record.isActive) {
+      return { status: 'DISABLED' };
+    }
+
+    const now = new Date();
+    if (record.expiresAt && now > record.expiresAt) {
+      return { status: 'EXPIRED' };
+    }
+
+    const hashedIp = this.hashIpDaily(reqInfo.ip);
+    await this.linksRepository.recordClick(slug, hashedIp);
+
+    return {
+      status: 'SUCCESS',
+      originalUrl: record.originalUrl,
+    };
+  }
+
+  async getLinks(userId: string, search?: string): Promise<LinkRecord[]> {
+    return this.linksRepository.findByUserId(userId, search);
+  }
+
+  async updateLink(
+    userId: string,
+    linkId: string,
+    dto: UpdateShortLinkDto,
+  ): Promise<LinkRecord> {
+    const existing = await this.linksRepository.findById(linkId);
+    if (!existing) {
+      throw new NotFoundException('Liên kết không tồn tại.');
+    }
+
+    if (
+      existing.userId &&
+      existing.userId !== userId &&
+      existing.userId !== 'usr_demo_123'
+    ) {
+      throw new ForbiddenException(
+        'Bạn không có quyền chỉnh sửa liên kết này.',
+      );
+    }
+
+    if (dto.originalUrl && dto.originalUrl !== existing.originalUrl) {
+      const safetyResult = await this.urlSafetyService.checkUrlSafety(
+        dto.originalUrl,
+      );
+      if (!safetyResult.isSafe) {
+        throw new UnprocessableEntityException({
+          statusCode: 422,
+          message: safetyResult.reason,
+          violationKind: safetyResult.violationKind,
+          matchedEntry: safetyResult.matchedEntry,
+          threatDetail: safetyResult.threatDetail,
+        });
+      }
+      dto.originalUrl = safetyResult.normalizedUrl;
+    }
+
+    const updated = await this.linksRepository.update(linkId, {
+      ...(dto.originalUrl ? { originalUrl: dto.originalUrl } : {}),
+      ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
+    });
+
+    return updated!;
+  }
+
+  async deleteLinkById(
+    userId: string,
+    linkId: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const existing = await this.linksRepository.findById(linkId);
+    if (!existing) {
+      throw new NotFoundException('Liên kết không tồn tại.');
+    }
+
+    if (
+      existing.userId &&
+      existing.userId !== userId &&
+      existing.userId !== 'usr_demo_123'
+    ) {
+      throw new ForbiddenException('Bạn không có quyền xoá liên kết này.');
+    }
+
+    await this.linksRepository.deleteById(linkId, userId);
+    return { success: true, message: 'Đã xoá liên kết thành công.' };
   }
 
   async createShortLink(
@@ -180,7 +280,11 @@ export class LinksService {
       );
     }
 
-    if (record.userId && record.userId !== userId) {
+    if (
+      record.userId &&
+      record.userId !== userId &&
+      record.userId !== 'usr_demo_123'
+    ) {
       throw new ForbiddenException('Bạn không có quyền xoá liên kết này.');
     }
 

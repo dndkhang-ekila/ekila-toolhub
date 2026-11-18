@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { AccountController } from './account.controller';
-import { AccountService } from './account.service';
 import { AccountRepository } from './account.repository';
+import { AccountService } from './account.service';
+import { EventsGateway } from './events.gateway';
 
 @Module({
   controllers: [AccountController],
-  providers: [AccountService, AccountRepository],
-  exports: [AccountService, AccountRepository],
+  providers: [AccountService, AccountRepository, EventsGateway],
+  exports: [AccountService, AccountRepository, EventsGateway],
 })
 export class AccountModule {}

@@ -6,6 +6,7 @@ import {
     UserProfile,
 } from '@/types/account';
 import { tokenStorage } from './api';
+import { getCurrentSocketId } from './socket';
 
 const API_BASE =
     process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
@@ -77,9 +78,15 @@ export async function logoutAllDevices(userId?: string): Promise<{
     message: string;
     tokenVersion: number;
 }> {
+    const socketId = getCurrentSocketId();
+    const headers = getAuthHeaders(userId);
+    if (socketId) {
+        headers['x-socket-id'] = socketId;
+    }
+
     const res = await fetch(`${API_BASE}/account/logout-all`, {
         method: 'POST',
-        headers: getAuthHeaders(userId),
+        headers,
     });
     return handleResponse<{
         success: boolean;
@@ -88,9 +95,6 @@ export async function logoutAllDevices(userId?: string): Promise<{
     }>(res);
 }
 
-/**
- * [FR-ACC-05] Gửi yêu cầu xoá tài khoản với thời hạn ân hạn 30 ngày
- */
 export async function deleteAccount(
     input: DeleteAccountInput,
     userId?: string,
@@ -103,9 +107,6 @@ export async function deleteAccount(
     return handleResponse<DeleteAccountResponse>(res);
 }
 
-/**
- * [FR-ACC-05] Huỷ yêu cầu xoá & Khôi phục tài khoản trong vòng 30 ngày
- */
 export async function restoreAccount(userId?: string): Promise<{
     success: boolean;
     message: string;

@@ -42,6 +42,14 @@ export interface CreateLinkResult {
   message?: string;
 }
 
+export type ResolveLinkStatus =
+  'SUCCESS' | 'NOT_FOUND' | 'DISABLED' | 'EXPIRED';
+
+export interface ResolveLinkResult {
+  status: ResolveLinkStatus;
+  originalUrl?: string;
+}
+
 export type AbuseReportReason =
   'PHISHING' | 'MALWARE' | 'SPAM' | 'ADULT' | 'COPYRIGHT' | 'OTHER';
 
