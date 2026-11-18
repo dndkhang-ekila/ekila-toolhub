@@ -17,7 +17,7 @@ import {
 } from '@/types/auth';
 import { useRouter } from 'next/navigation';
 import { authApi, tokenStorage } from '@/lib/api';
-import { getSocket } from '@/lib/socket';
+import { disconnectSocket, getSocket } from '@/lib/socket';
 
 interface AuthContextType {
   user: User | null;
@@ -61,14 +61,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
   }, []);
 
-  // Lắng nghe sự kiện đăng xuất từ mọi thiết bị khác qua Socket.io
   useEffect(() => {
-    const targetUserId = user?.id || 'usr_demo_123';
-    const socket = getSocket(targetUserId);
+    if (isLoading) return;
+    if (!user?.id) {
+      disconnectSocket();
+      return;
+    }
+
+    const socket = getSocket(user.id);
 
     const handleForceLogout = (data: { message?: string }) => {
       alert(data?.message || 'Bạn đã đăng xuất khỏi thiết bị này từ một nơi khác.');
       tokenStorage.remove();
+      disconnectSocket();
       setUser(null);
       router.push('/login');
     };
@@ -78,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       socket.off('FORCE_LOGOUT', handleForceLogout);
     };
-  }, [user?.id, router]);
+  }, [user?.id, isLoading, router]);
 
   const login = useCallback(
     async (credentials: LoginCredentials): Promise<AuthResponse> => {
@@ -137,6 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => {
     authApi.logout();
+    disconnectSocket();
     setUser(null);
   }, []);
 

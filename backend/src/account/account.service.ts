@@ -2,7 +2,12 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { User } from '../auth/entities/user.entity';
 import { AccountRepository } from './account.repository';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
@@ -18,14 +23,31 @@ import { PasswordHasher } from './password-hasher';
 
 @Injectable()
 export class AccountService {
-  constructor(private readonly accountRepository: AccountRepository) {}
+  constructor(
+    private readonly accountRepository: AccountRepository,
+    @Optional()
+    @InjectRepository(User)
+    private readonly userRepository?: Repository<User>,
+    @Optional()
+    private readonly jwtService?: JwtService,
+  ) {}
 
   async getProfile(userId: string): Promise<UserProfile> {
     const user = await this.accountRepository.findById(userId);
-    if (!user) {
-      throw new NotFoundException('Không tìm thấy người dùng');
+    if (user) {
+      return this.toUserProfile(user);
     }
-    return this.toUserProfile(user);
+
+    if (this.userRepository) {
+      const authUser = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+      if (authUser) {
+        return this.fromAuthUser(authUser);
+      }
+    }
+
+    throw new NotFoundException('Không tìm thấy người dùng');
   }
 
   async updateProfile(
@@ -179,9 +201,40 @@ export class AccountService {
     };
   }
 
-  async logoutAllDevices(
-    userId: string,
-  ): Promise<{ success: boolean; message: string; tokenVersion: number }> {
+  async logoutAllDevices(userId: string): Promise<{
+    success: boolean;
+    message: string;
+    tokenVersion: number;
+    accessToken?: string;
+  }> {
+    if (this.userRepository) {
+      const authUser = await this.userRepository.findOne({
+        where: { id: userId },
+      });
+      if (authUser) {
+        authUser.tokenVersion = (authUser.tokenVersion || 1) + 1;
+        await this.userRepository.save(authUser);
+
+        let accessToken: string | undefined;
+        if (this.jwtService) {
+          accessToken = await this.jwtService.signAsync({
+            sub: authUser.id,
+            email: authUser.email,
+            role: authUser.role,
+            plan: authUser.plan,
+            tokenVersion: authUser.tokenVersion,
+          });
+        }
+
+        return {
+          success: true,
+          message: 'Đã hủy tất cả các phiên đăng nhập trên mọi thiết bị.',
+          tokenVersion: authUser.tokenVersion,
+          accessToken,
+        };
+      }
+    }
+
     const nextVersion =
       await this.accountRepository.incrementTokenVersion(userId);
     if (nextVersion === null) {
@@ -192,6 +245,23 @@ export class AccountService {
       success: true,
       message: 'Đã hủy tất cả các phiên đăng nhập trên mọi thiết bị.',
       tokenVersion: nextVersion,
+    };
+  }
+
+  private fromAuthUser(user: User): UserProfile {
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name || user.email.split('@')[0],
+      avatarUrl: user.avatarUrl || undefined,
+      phone: undefined,
+      theme: 'system',
+      locale: user.locale || 'vi',
+      isDeleted: false,
+      deletedAt: null,
+      scheduledPermanentDeletionAt: null,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
     };
   }
 

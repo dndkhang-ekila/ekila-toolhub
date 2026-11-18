@@ -1,6 +1,9 @@
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { User } from '../auth/entities/user.entity';
 import { AccountService } from './account.service';
 import { AccountRepository } from './account.repository';
 
@@ -199,6 +202,55 @@ describe('AccountService', () => {
       const res = await service.logoutAllDevices('usr_demo_123');
       expect(res.success).toBe(true);
       expect(res.tokenVersion).toBeGreaterThan(1);
+    });
+
+    it('should increment tokenVersion in SQLite User and issue fresh accessToken', async () => {
+      const mockAuthUser = {
+        id: 'uuid-real-user-1',
+        email: 'real@example.com',
+        name: 'Real User',
+        role: 'free',
+        plan: 'free',
+        locale: 'vi',
+        avatarUrl: null,
+        tokenVersion: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as unknown as User;
+
+      const userRepoMock = {
+        findOne: jest.fn(() => Promise.resolve(mockAuthUser)),
+        save: jest.fn((u: User) => Promise.resolve(u)),
+      };
+      const jwtServiceMock = {
+        signAsync: jest.fn(() => Promise.resolve('new.signed.jwt')),
+      };
+
+      const realModule: TestingModule = await Test.createTestingModule({
+        providers: [
+          AccountService,
+          AccountRepository,
+          { provide: getRepositoryToken(User), useValue: userRepoMock },
+          { provide: JwtService, useValue: jwtServiceMock },
+        ],
+      }).compile();
+
+      const realService = realModule.get<AccountService>(AccountService);
+
+      const profile = await realService.getProfile('uuid-real-user-1');
+      expect(profile.email).toBe('real@example.com');
+
+      const res = await realService.logoutAllDevices('uuid-real-user-1');
+      expect(res.success).toBe(true);
+      expect(res.tokenVersion).toBe(2);
+      expect(res.accessToken).toBe('new.signed.jwt');
+      expect(userRepoMock.save).toHaveBeenCalledTimes(1);
+      expect(jwtServiceMock.signAsync).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sub: 'uuid-real-user-1',
+          tokenVersion: 2,
+        }),
+      );
     });
   });
 });
