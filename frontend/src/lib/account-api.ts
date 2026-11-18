@@ -77,6 +77,7 @@ export async function logoutAllDevices(userId?: string): Promise<{
     success: boolean;
     message: string;
     tokenVersion: number;
+    accessToken?: string;
 }> {
     const socketId = getCurrentSocketId();
     const headers = getAuthHeaders(userId);
@@ -88,11 +89,18 @@ export async function logoutAllDevices(userId?: string): Promise<{
         method: 'POST',
         headers,
     });
-    return handleResponse<{
+    const data = await handleResponse<{
         success: boolean;
         message: string;
         tokenVersion: number;
+        accessToken?: string;
     }>(res);
+
+    if (data.accessToken) {
+        tokenStorage.set(data.accessToken);
+    }
+
+    return data;
 }
 
 export async function deleteAccount(
