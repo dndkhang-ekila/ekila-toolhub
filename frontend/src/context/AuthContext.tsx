@@ -13,6 +13,7 @@ import {
   RegisterData,
   VerifyEmailData,
   ResendVerificationData,
+  ResendVerificationResponse,
   AuthResponse,
 } from '@/types/auth';
 import { useRouter } from 'next/navigation';
@@ -26,7 +27,7 @@ interface AuthContextType {
   login: (credentials: LoginCredentials) => Promise<AuthResponse>;
   register: (data: Omit<RegisterData, 'confirmPassword'>) => Promise<AuthResponse>;
   verifyEmail: (data: VerifyEmailData) => Promise<AuthResponse>;
-  resendVerification: (data: ResendVerificationData) => Promise<{ success: boolean; message: string }>;
+  resendVerification: (data: ResendVerificationData) => Promise<ResendVerificationResponse>;
   logout: () => void;
   setUser: (user: User | null) => void;
 }
@@ -129,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const resendVerification = useCallback(
-    async (data: ResendVerificationData) => {
+    async (data: ResendVerificationData): Promise<ResendVerificationResponse> => {
       return await authApi.resendVerification(data);
     },
     []

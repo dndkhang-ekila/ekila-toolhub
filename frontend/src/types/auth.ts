@@ -1,6 +1,7 @@
 export type UserRole = 'guest' | 'free' | 'pro' | 'admin';
 export type UserPlan = 'free' | 'pro';
 export type UserLocale = 'vi' | 'en';
+export type EmailDeliveryMode = 'smtp' | 'ethereal' | 'console' | 'failed';
 
 export interface User {
   id: string;
@@ -51,6 +52,17 @@ export interface AuthResponse {
   tokens?: AuthTokens;
   requiresEmailVerification?: boolean;
   verificationEmail?: string;
+  emailSent?: boolean;
+  deliveryMode?: EmailDeliveryMode;
+  emailError?: string;
+}
+
+export interface ResendVerificationResponse {
+  success: boolean;
+  message: string;
+  emailSent?: boolean;
+  deliveryMode?: EmailDeliveryMode;
+  emailError?: string;
 }
 
 export interface ApiErrorResponse {

@@ -2,6 +2,15 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 
+export type EmailDeliveryMode = 'smtp' | 'ethereal' | 'console' | 'failed';
+
+export interface EmailDeliveryResult {
+  sent: boolean;
+  mode: EmailDeliveryMode;
+  previewUrl?: string;
+  error?: string;
+}
+
 @Injectable()
 export class MailerService {
   private readonly logger = new Logger(MailerService.name);
@@ -127,13 +136,13 @@ export class MailerService {
 
   /**
    * Gửi email chứa mã OTP và link xác minh theo chuẩn SRS Table 8 (Dịch vụ email giao dịch)
-   * Sử dụng SMTP Transporter đọc từ biến môi trường.
+   * Trả về chi tiết kết quả gửi mail (mode: smtp | ethereal | console | failed)
    */
-  async sendVerificationEmail(
+  async sendVerificationEmailWithResult(
     toEmail: string,
     code: string,
     token: string,
-  ): Promise<boolean> {
+  ): Promise<EmailDeliveryResult> {
     const frontendUrl =
       this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
     const verifyLink = `${frontendUrl}/verify-email?email=${encodeURIComponent(
@@ -150,37 +159,61 @@ export class MailerService {
     this.logger.log(`LINK XÁC MINH NHANH: ${verifyLink}`);
     this.logger.log('====================================================');
 
-    // Đọc cấu hình SMTP từ biến môi trường (.env)
-    const host =
-      this.configService.get<string>('SMTP_HOST') || 'smtp.gmail.com';
+    // Đọc cấu hình SMTP từ biến môi trường (.env), hỗ trợ cả SMTP_PASS và SMTP_PASSWORD
+    const host = (
+      this.configService.get<string>('SMTP_HOST') || 'smtp.gmail.com'
+    ).trim();
     const port =
       Number(this.configService.get<number | string>('SMTP_PORT')) || 587;
-    const user = this.configService.get<string>('SMTP_USER');
-    const pass = this.configService.get<string>('SMTP_PASS');
+    const user = (this.configService.get<string>('SMTP_USER') || '').trim();
+    let pass = (
+      this.configService.get<string>('SMTP_PASS') ||
+      this.configService.get<string>('SMTP_PASSWORD') ||
+      ''
+    ).trim();
+    if (pass && host.toLowerCase().includes('gmail.com')) {
+      // Mật khẩu ứng dụng Google (App Password) thường có khoảng trắng 4 ký tự một nhóm
+      pass = pass.replace(/\s+/g, '');
+    }
+
     const secureConfig = this.configService.get<string | boolean>(
       'SMTP_SECURE',
     );
     const secure =
       secureConfig === true || secureConfig === 'true' || port === 465;
-    const fromAddress =
+
+    const configuredFrom = (
       this.configService.get<string>('MAIL_FROM') ||
-      (user ? `"ToolHub" <${user}>` : '"ToolHub" <no-reply@toolhub.local>');
+      this.configService.get<string>('SMTP_FROM') ||
+      ''
+    ).trim();
+    const isLocalPlaceholder =
+      !configuredFrom ||
+      configuredFrom.toLowerCase().includes('@toolhub.local');
+    const fromAddress =
+      user && isLocalPlaceholder
+        ? `"ToolHub" <${user}>`
+        : configuredFrom || '"ToolHub" <no-reply@toolhub.local>';
 
     const subject = '[ToolHub] Mã xác minh tài khoản của bạn (OTP)';
     const html = this.buildOtpEmailHtml(code, verifyLink, toEmail);
     const text = `Xin chào,\n\nMã xác minh OTP của bạn tại ToolHub là: ${code}\nMã có hiệu lực trong 30 phút.\n\nHoặc bấm vào liên kết sau để kích hoạt tài khoản: ${verifyLink}\n\nTrân trọng,\nToolHub Team`;
 
-    // 1. Trường hợp đã cấu hình đầy đủ SMTP_USER và SMTP_PASS
+    // 1. Trường hợp đã cấu hình đầy đủ SMTP_USER và SMTP_PASS / SMTP_PASSWORD
     if (user && pass) {
       try {
         const transporter = nodemailer.createTransport({
           host,
           port,
           secure,
+          ...(port === 587 && !secure ? { requireTLS: true } : {}),
           auth: {
             user,
             pass,
           },
+          connectionTimeout: 10_000,
+          greetingTimeout: 10_000,
+          socketTimeout: 15_000,
         });
 
         const info = await transporter.sendMail({
@@ -191,27 +224,37 @@ export class MailerService {
           html,
         });
 
+        if (Array.isArray(info.rejected) && info.rejected.length > 0) {
+          const rejectedList = info.rejected
+            .map((entry: string | { address?: string }) =>
+              typeof entry === 'string' ? entry : entry?.address || 'unknown',
+            )
+            .join(', ');
+          const rejectMsg = `Email bị máy chủ SMTP từ chối tới: ${rejectedList}`;
+          this.logger.error(`❌ [SMTP REJECTED] ${rejectMsg}`);
+          return { sent: false, mode: 'failed', error: rejectMsg };
+        }
+
         this.logger.log(
           `✅ [SMTP] Đã gửi email xác minh OTP thành công tới: ${toEmail} (MessageId: ${info.messageId})`,
         );
-        return true;
+        return { sent: true, mode: 'smtp' };
       } catch (err: unknown) {
         const errorMsg = err instanceof Error ? err.message : String(err);
         this.logger.error(
           `❌ [SMTP ERROR] Không thể gửi email qua SMTP: ${errorMsg}`,
         );
         // Không throw lỗi làm crash luồng đăng ký của người dùng, giữ log rõ ràng
-        return false;
+        return { sent: false, mode: 'failed', error: errorMsg };
       }
     }
 
-    // 2. Trường hợp chưa cấu hình credentials: Thử nghiệm tạo tài khoản Ethereal hoặc fallback an toàn
+    // 2. Trường hợp chưa cấu hình credentials: Thử nghiệm tạo tài khoản Ethereal hoặc fallback console
     this.logger.warn(
-      `⚠️ [MailerService] Chưa tìm thấy cấu hình SMTP_USER / SMTP_PASS trong .env. Khởi tạo phiên thử nghiệm (Ethereal / Console)...`,
+      `⚠️ [MailerService] Chưa tìm thấy cấu hình SMTP_USER / SMTP_PASS trong .env. Email KHÔNG được gửi tới hộp thư thật (${toEmail}). Khởi tạo phiên xem trước (Ethereal / Console)...`,
     );
 
     try {
-      // Tự động dùng tài khoản Ethereal thực tế để tạo hộp thư xem trước
       const testAccount = await nodemailer.createTestAccount();
       const testTransporter = nodemailer.createTransport({
         host: 'smtp.ethereal.email',
@@ -221,6 +264,9 @@ export class MailerService {
           user: testAccount.user,
           pass: testAccount.pass,
         },
+        connectionTimeout: 10_000,
+        greetingTimeout: 10_000,
+        socketTimeout: 15_000,
       });
 
       const info = await testTransporter.sendMail({
@@ -232,17 +278,34 @@ export class MailerService {
       });
 
       const previewUrl = nodemailer.getTestMessageUrl(info);
-      if (previewUrl) {
+      if (typeof previewUrl === 'string' && previewUrl) {
         this.logger.log(
-          `🔗 [Ethereal Preview URL] Xem hộp thư email thực tế tại: ${previewUrl}`,
+          `🔗 [Ethereal Preview URL] Xem hộp thư xem trước tại: ${previewUrl}`,
         );
+        return { sent: true, mode: 'ethereal', previewUrl };
       }
-      return true;
+      return { sent: true, mode: 'ethereal' };
     } catch {
       this.logger.log(
-        `ℹ️ [Dev Mode] Đã hoàn tất xử lý OTP qua Terminal Console (OTP: ${code}). Vui lòng cấu hình SMTP_USER và SMTP_PASS trong .env để gửi email thật.`,
+        `ℹ️ [Dev Mode] Đã xử lý OTP qua Terminal Console (OTP: ${code}). Hãy cấu hình SMTP_USER và SMTP_PASS trong backend/.env để gửi email thật.`,
       );
-      return true;
+      return { sent: true, mode: 'console' };
     }
+  }
+
+  /**
+   * Wrapper tương thích ngược trả về boolean
+   */
+  async sendVerificationEmail(
+    toEmail: string,
+    code: string,
+    token: string,
+  ): Promise<boolean> {
+    const result = await this.sendVerificationEmailWithResult(
+      toEmail,
+      code,
+      token,
+    );
+    return result.sent;
   }
 }
