@@ -43,12 +43,16 @@ export class ReportsService {
       );
     }
 
-    // Resolve targetUrl from existing link if possible
-    const link = await this.linksRepository.findBySlug(dto.slug);
-    const targetUrl = link ? link.originalUrl : `/${dto.slug}`;
+    const normalizedSlug = this.normalizeSlug(dto.slug);
+    if (!normalizedSlug) {
+      throw new BadRequestException('Mã slug hoặc liên kết không hợp lệ.');
+    }
+
+    const link = await this.linksRepository.findBySlug(normalizedSlug);
+    const targetUrl = link ? link.originalUrl : `/${normalizedSlug}`;
 
     const report = await this.reportsRepository.create({
-      slug: dto.slug.trim(),
+      slug: normalizedSlug,
       targetUrl,
       reason: dto.reason,
       details: dto.details?.trim(),
@@ -90,18 +94,19 @@ export class ReportsService {
 
     let actionTaken = report.actionTaken || 'NONE';
     let status = dto.status;
+    const targetSlug = this.normalizeSlug(report.slug);
 
     if (dto.action === 'DISABLE_LINK') {
-      const link = await this.linksRepository.findBySlug(report.slug);
+      const link = await this.linksRepository.findBySlug(targetSlug);
       if (link) {
         await this.linksRepository.update(link.id, { isActive: false });
       }
       actionTaken = 'DISABLED';
       status = 'RESOLVED';
     } else if (dto.action === 'DELETE_LINK') {
-      const link = await this.linksRepository.findBySlug(report.slug);
+      const link = await this.linksRepository.findBySlug(targetSlug);
       if (link) {
-        await this.linksRepository.delete(report.slug, link.userId);
+        await this.linksRepository.delete(targetSlug, link.userId);
       }
       actionTaken = 'DELETED';
       status = 'RESOLVED';
@@ -123,5 +128,34 @@ export class ReportsService {
     }
 
     return updated;
+  }
+
+  private normalizeSlug(raw: string): string {
+    const trimmed = (raw || '').trim();
+    if (!trimmed) return '';
+
+    let path = trimmed;
+    if (/^https?:\/\//i.test(trimmed)) {
+      try {
+        path = new URL(trimmed).pathname;
+      } catch {
+        path = trimmed;
+      }
+    }
+
+    path = path
+      .split('?')[0]
+      .split('#')[0]
+      .replace(/^\/+|\/+$/g, '');
+    if (path.startsWith('s/')) {
+      path = path.slice(2);
+    } else if (path.startsWith('api/v1/links/redirect/')) {
+      path = path.slice('api/v1/links/redirect/'.length);
+    } else if (path.startsWith('api/v1/links/r/')) {
+      path = path.slice('api/v1/links/r/'.length);
+    }
+
+    const segments = path.split('/').filter(Boolean);
+    return segments[segments.length - 1] || '';
   }
 }

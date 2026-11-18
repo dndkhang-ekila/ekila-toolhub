@@ -148,5 +148,39 @@ describe('ReportsService', () => {
       expect(dismissed.status).toBe('DISMISSED');
       expect(dismissed.actionTaken).toBe('NONE');
     });
+
+    it('extracts slug when visitor pastes full short URL and disables it properly', async () => {
+      await linksRepo.create({
+        id: 'lnk_full_url_test',
+        slug: '6h6kyft',
+        originalUrl: 'https://phishing-target.example.com',
+        shortUrl: 'http://localhost:3000/s/6h6kyft',
+        userId: 'usr_1',
+        isGuest: false,
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 86400000),
+        clickCount: 1,
+        uniqueDailyHashes: [],
+        isActive: true,
+      });
+
+      const reportRes = await service.submitReport(
+        { slug: 'http://localhost:3000/s/6h6kyft', reason: 'PHISHING' },
+        '1.2.3.9',
+      );
+
+      const saved = await reportsRepo.findById(reportRes.reportId);
+      expect(saved?.slug).toBe('6h6kyft');
+      expect(saved?.targetUrl).toBe('https://phishing-target.example.com');
+
+      await service.handleAdminAction(
+        reportRes.reportId,
+        { status: 'RESOLVED', action: 'DISABLE_LINK' },
+        'admin_sys',
+      );
+
+      const link = await linksRepo.findBySlug('6h6kyft');
+      expect(link?.isActive).toBe(false);
+    });
   });
 });

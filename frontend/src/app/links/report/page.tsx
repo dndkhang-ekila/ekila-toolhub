@@ -146,21 +146,16 @@ function ReportFormContent() {
 
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-neutral-700 dark:text-neutral-300">
-              Mã link hoặc Slug cần báo cáo <span className="text-rose-500">*</span>
+              Link rút gọn hoặc mã Slug cần báo cáo <span className="text-rose-500">*</span>
             </label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-mono text-neutral-400">
-                /
-              </span>
-              <input
-                type="text"
-                required
-                value={slug}
-                onChange={(e) => setSlug(e.target.value.replace(/^\//, ''))}
-                placeholder="slug-can-bao-cao"
-                className="w-full text-xs font-mono pl-7 pr-3 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition"
-              />
-            </div>
+            <input
+              type="text"
+              required
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              placeholder="Ví dụ: 6h6kyft hoặc http://localhost:3000/s/6h6kyft"
+              className="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-800/50 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition"
+            />
           </div>
 
           <div className="space-y-2">

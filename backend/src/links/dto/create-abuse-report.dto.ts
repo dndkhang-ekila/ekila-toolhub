@@ -11,7 +11,7 @@ import type { AbuseReportReason } from '../links.types';
 export class CreateAbuseReportDto {
   @IsString()
   @IsNotEmpty()
-  @MaxLength(100)
+  @MaxLength(500)
   slug: string;
 
   @IsString()

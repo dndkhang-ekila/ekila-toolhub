@@ -88,6 +88,7 @@ export class ReportsRepository {
   findAll(filter: AdminReportsFilter = {}): Promise<AdminReportsQueryResult> {
     let all = Array.from(this.reports.values());
 
+    const total = all.length;
     const pendingCount = all.filter((r) => r.status === 'PENDING').length;
     const resolvedCount = all.filter((r) => r.status === 'RESOLVED').length;
     const dismissedCount = all.filter((r) => r.status === 'DISMISSED').length;
@@ -112,7 +113,6 @@ export class ReportsRepository {
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
 
-    const total = all.length;
     const page = Math.max(1, filter.page || 1);
     const limit = Math.max(1, Math.min(100, filter.limit || 20));
     const start = (page - 1) * limit;
