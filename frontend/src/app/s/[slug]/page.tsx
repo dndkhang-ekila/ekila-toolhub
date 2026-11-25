@@ -85,7 +85,7 @@ function RedirectHandler({
               Về trang chủ
             </button>
             <Link
-              href="/shorten-url"
+              href="/tools/url-shortener"
               className="px-4 py-2 text-xs font-semibold rounded-xl border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300"
             >
               Tạo link mới
