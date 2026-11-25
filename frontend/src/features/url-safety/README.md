@@ -5,7 +5,7 @@ Module kiểm tra an toàn URL đích trước khi tạo liên kết rút gọn,
 ## Phạm vi triển khai
 
 - **Mã yêu cầu**: `[FR-URL-03][FE]` (Thuộc tiện ích M01 - Rút gọn link, mức ưu tiên P0 Must theo SRS TH-SRS-001).
-- **Giao diện & Route**: Tuyến `/url-shortener` độc lập, hỗ trợ giao diện responsive từ mobile (360px) đến desktop, dark/light mode.
+- **Giao diện & Route**: Tích hợp trực tiếp vào tuyến `/tools/url-shortener` của hệ thống công cụ ToolHub, hỗ trợ giao diện responsive từ mobile (360px) đến desktop, dark/light mode.
 - **Quy tắc nghiệp vụ**:
   - `BR-URL-01`: Liên kết tạo bởi Khách (Guest) không thể sửa/xoá; tự hết hạn sau 30 ngày nếu không có lượt nhấp.
   - `BR-URL-02`: Nếu rút gọn lại URL đích đã từng tạo trong phiên, hệ thống hỏi người dùng muốn dùng lại link cũ hay tạo link mới.
