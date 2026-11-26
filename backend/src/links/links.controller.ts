@@ -43,7 +43,8 @@ export class LinksController {
   async checkSafety(
     @Body() dto: CheckUrlSafetyDto,
   ): Promise<SafetyCheckResult> {
-    return this.urlSafetyService.checkUrlSafety(dto.url);
+    const targetUrl = (dto.url || dto.originalUrl || '').trim();
+    return this.urlSafetyService.checkUrlSafety(targetUrl);
   }
 
   @Post()
