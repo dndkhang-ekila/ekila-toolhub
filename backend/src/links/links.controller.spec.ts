@@ -47,7 +47,7 @@ describe('LinksController', () => {
     urlSafetyService = module.get<UrlSafetyService>(UrlSafetyService);
   });
 
-  it('should call checkUrlSafety on check-safety endpoint', async () => {
+  it('should call checkUrlSafety on check-safety endpoint with url property', async () => {
     const mockResult = {
       isSafe: true as const,
       normalizedUrl: 'https://example.com',
@@ -57,6 +57,22 @@ describe('LinksController', () => {
     checkSpy.mockResolvedValue(mockResult);
 
     const res = await controller.checkSafety({ url: 'https://example.com' });
+    expect(res).toEqual(mockResult);
+    expect(checkSpy).toHaveBeenCalledWith('https://example.com');
+  });
+
+  it('should call checkUrlSafety on check-safety endpoint with originalUrl property fallback', async () => {
+    const mockResult = {
+      isSafe: true as const,
+      normalizedUrl: 'https://example.com',
+      hostname: 'example.com',
+    };
+    const checkSpy = jest.spyOn(urlSafetyService, 'checkUrlSafety');
+    checkSpy.mockResolvedValue(mockResult);
+
+    const res = await controller.checkSafety({
+      originalUrl: 'https://example.com',
+    });
     expect(res).toEqual(mockResult);
     expect(checkSpy).toHaveBeenCalledWith('https://example.com');
   });

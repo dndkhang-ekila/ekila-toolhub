@@ -148,4 +148,87 @@ describe('UrlSafetyService', () => {
       }
     }
   });
+
+  it('should query SAFE_BROWSING_API_URL when configured and flag malicious URL', async () => {
+    const customConfig = {
+      get: jest.fn().mockImplementation((key: string) => {
+        if (key === 'SAFE_BROWSING_API_URL') {
+          return 'https://safebrowsing.mock/api';
+        }
+        return null;
+      }),
+    };
+    const module = await Test.createTestingModule({
+      providers: [
+        UrlSafetyService,
+        {
+          provide: ConfigService,
+          useValue: customConfig,
+        },
+      ],
+    }).compile();
+
+    const serviceWithApi = module.get<UrlSafetyService>(UrlSafetyService);
+
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          isSafe: false,
+          threatType: 'MALWARE',
+          description: 'Detected by external API',
+        }),
+    });
+
+    try {
+      const result = await serviceWithApi.checkUrlSafety(
+        'https://unknown-suspicious-domain.org/test',
+      );
+      expect(result.isSafe).toBe(false);
+      if (!result.isSafe) {
+        expect(result.violationKind).toBe('MALICIOUS_MALWARE');
+        expect(result.reason).toBe('Detected by external API');
+      }
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
+
+  it('should fallback to offline signatures when external SAFE_BROWSING_API_URL fetch fails', async () => {
+    const customConfig = {
+      get: jest.fn().mockImplementation((key: string) => {
+        if (key === 'SAFE_BROWSING_API_URL') {
+          return 'https://safebrowsing.mock/api';
+        }
+        return null;
+      }),
+    };
+    const module = await Test.createTestingModule({
+      providers: [
+        UrlSafetyService,
+        {
+          provide: ConfigService,
+          useValue: customConfig,
+        },
+      ],
+    }).compile();
+
+    const serviceWithApi = module.get<UrlSafetyService>(UrlSafetyService);
+
+    const originalFetch = global.fetch;
+    global.fetch = jest.fn().mockRejectedValue(new Error('Network error'));
+
+    try {
+      const result = await serviceWithApi.checkUrlSafety(
+        'https://malware-test.com/sample',
+      );
+      expect(result.isSafe).toBe(false);
+      if (!result.isSafe) {
+        expect(result.violationKind).toBe('MALICIOUS_MALWARE');
+      }
+    } finally {
+      global.fetch = originalFetch;
+    }
+  });
 });
